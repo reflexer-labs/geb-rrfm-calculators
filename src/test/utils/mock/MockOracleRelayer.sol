@@ -9,13 +9,20 @@ contract MockOracleRelayer {
     uint256 public redemptionPriceUpdateTime;
     // Virtual redemption price (not the most updated value)
     uint256 internal _redemptionPrice;
+    // Upper bound for the per-second redemption rate
+    uint256 public redemptionRateUpperBound;                       // [ray]
+    // Lower bound for the per-second redemption rate
+    uint256 public redemptionRateLowerBound;                       // [ray]
 
     constructor() public {
-        redemptionRate   = RAY;
-        _redemptionPrice = RAY;
+        redemptionRate           = RAY;
+        _redemptionPrice         = RAY;
+        redemptionRateUpperBound = RAY * WAD;
+        redemptionRateLowerBound = 1;
     }
 
     // --- Math ---
+    uint constant WAD = 10 ** 18;
     uint constant RAY = 10 ** 27;
 
     function subtract(uint x, uint y) internal pure returns (uint z) {
@@ -58,7 +65,21 @@ contract MockOracleRelayer {
       if (parameter == "redemptionPrice") _redemptionPrice = data;
       else if (parameter == "redemptionRate") {
         require(now == redemptionPriceUpdateTime, "MockOracleRelayer/redemption-price-not-updated");
-        redemptionRate = data;
+          uint256 adjustedRate = data;
+          if (data > redemptionRateUpperBound) {
+            adjustedRate = redemptionRateUpperBound;
+          } else if (data < redemptionRateLowerBound) {
+            adjustedRate = redemptionRateLowerBound;
+          }
+          redemptionRate = adjustedRate;
+      }
+      else if (parameter == "redemptionRateUpperBound") {
+        require(data > RAY, "MockOracleRelayer/invalid-redemption-rate-upper-bound");
+        redemptionRateUpperBound = data;
+      }
+      else if (parameter == "redemptionRateLowerBound") {
+        require(data < RAY, "MockOracleRelayer/invalid-redemption-rate-lower-bound");
+        redemptionRateLowerBound = data;
       }
     }
 
@@ -85,3 +106,4 @@ contract MockOracleRelayer {
       return _redemptionPrice;
     }
 }
+
