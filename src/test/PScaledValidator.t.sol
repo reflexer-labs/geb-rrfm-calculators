@@ -87,19 +87,19 @@ contract PScaledValidatorTest is DSTest {
         assertEq(validator.authorities(address(this)), 1);
 
         assertEq(validator.seedProposer(), address(rateSetter));
-        assertEq(validator.nb(), noiseBarrier);
-        assertEq(validator.foub(), feedbackOutputUpperBound);
-        assertEq(validator.folb(), feedbackOutputLowerBound);
-        assertEq(validator.lut(), 0);
+        assertEq(validator.nb_9Y5(), noiseBarrier);
+        assertEq(validator.foub_TvR(), feedbackOutputUpperBound);
+        assertEq(validator.folb_tas(), feedbackOutputLowerBound);
+        assertEq(validator.lut_E4m(), 0);
         assertEq(validator.ps(), periodSize);
         assertEq(validator.lprad(), lowerPrecomputedRateAllowedDeviation);
-        assertEq(validator.uprad(), upperPrecomputedRateAllowedDeviation);
+        assertEq(validator.uprad_45M(), upperPrecomputedRateAllowedDeviation);
         assertEq(validator.adi(), allowedDeviationIncrease);
-        assertEq(Kp, validator.sg());
-        assertEq(validator.drr(), TWENTY_SEVEN_DECIMAL_NUMBER);
+        assertEq(Kp, validator.sg_ME1());
+        assertEq(validator.drr_f0j(), TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(validator.pscl(), int(TWENTY_SEVEN_DECIMAL_NUMBER));
-        assertEq(validator.oll(), 0);
-        assertEq(validator.mrt(), 0);
+        assertEq(validator.oll_reI(), 0);
+        assertEq(validator.mrt_vW0(), 0);
         assertEq(validator.tlv(), 0);
     }
     function test_modify_parameters() public {
@@ -118,16 +118,16 @@ contract PScaledValidatorTest is DSTest {
         validator.modifyParameters("folb", -int(1));
         validator.modifyParameters("mrt", uint(24 * 3600));
 
-        assertEq(validator.nb(), EIGHTEEN_DECIMAL_NUMBER);
-        assertEq(validator.foub(), TWENTY_SEVEN_DECIMAL_NUMBER + 1);
+        assertEq(validator.nb_9Y5(), EIGHTEEN_DECIMAL_NUMBER);
+        assertEq(validator.foub_TvR(), TWENTY_SEVEN_DECIMAL_NUMBER + 1);
         assertEq(validator.ps(), 1);
-        assertEq(validator.sg(), 1);
-        assertEq(validator.folb(), -int(1));
-        assertEq(validator.mrt(), 24 * 3600);
-        assertEq(1, validator.sg());
+        assertEq(validator.sg_ME1(), 1);
+        assertEq(validator.folb_tas(), -int(1));
+        assertEq(validator.mrt_vW0(), 24 * 3600);
+        assertEq(1, validator.sg_ME1());
     }
     function test_get_annual_rate_no_proportional() public {
-        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate(
+        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate_xlS(
           EIGHTEEN_DECIMAL_NUMBER, TWENTY_SEVEN_DECIMAL_NUMBER
         );
         assertEq(newRate, TWENTY_SEVEN_DECIMAL_NUMBER);
@@ -140,39 +140,39 @@ contract PScaledValidatorTest is DSTest {
         assertEq(validator.authorities(address(this)), 1);
 
         assertEq(validator.seedProposer(), address(rateSetter));
-        assertEq(validator.nb(), noiseBarrier);
-        assertEq(validator.foub(), feedbackOutputUpperBound);
-        assertEq(validator.folb(), feedbackOutputLowerBound);
-        assertEq(validator.lut(), 0);
+        assertEq(validator.nb_9Y5(), noiseBarrier);
+        assertEq(validator.foub_TvR(), feedbackOutputUpperBound);
+        assertEq(validator.folb_tas(), feedbackOutputLowerBound);
+        assertEq(validator.lut_E4m(), 0);
         assertEq(validator.ps(), periodSize);
         assertEq(validator.lprad(), lowerPrecomputedRateAllowedDeviation);
-        assertEq(validator.uprad(), upperPrecomputedRateAllowedDeviation);
+        assertEq(validator.uprad_45M(), upperPrecomputedRateAllowedDeviation);
         assertEq(validator.adi(), allowedDeviationIncrease);
-        assertEq(Kp, validator.sg());
-        assertEq(validator.drr(), TWENTY_SEVEN_DECIMAL_NUMBER);
+        assertEq(Kp, validator.sg_ME1());
+        assertEq(validator.drr_f0j(), TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(validator.pscl(), int(TWENTY_SEVEN_DECIMAL_NUMBER));
-        assertEq(validator.oll(), 0);
-        assertEq(validator.mrt(), 0);
+        assertEq(validator.oll_reI(), 0);
+        assertEq(validator.mrt_vW0(), 0);
         assertEq(validator.tlv(), 0);
     }
     function test_update_rate_no_deviation() public {
         hevm.warp(now + validator.ps() + 1);
 
-        (uint newRate, ,) = validator.getNextRedemptionRate(
+        (uint newRate, ,) = validator.getNextRedemptionRate_xlS(
           EIGHTEEN_DECIMAL_NUMBER, TWENTY_SEVEN_DECIMAL_NUMBER
         );
 
         assertEq(rateSetter.iapcr(), TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(validator.rt(1 ether, TWENTY_SEVEN_DECIMAL_NUMBER, rateSetter.iapcr()), SPY);
         assertEq(rateSetter.getRTAdjustedSeed(TWENTY_SEVEN_DECIMAL_NUMBER, 1 ether, TWENTY_SEVEN_DECIMAL_NUMBER), TWENTY_SEVEN_DECIMAL_NUMBER);
-        assertTrue(validator.correctPreComputedRate(TWENTY_SEVEN_DECIMAL_NUMBER, newRate, lowerPrecomputedRateAllowedDeviation));
+        assertTrue(validator.correctPreComputedRate_kXS(TWENTY_SEVEN_DECIMAL_NUMBER, newRate, lowerPrecomputedRateAllowedDeviation));
 
         rateSetter.updateRate(TWENTY_SEVEN_DECIMAL_NUMBER, address(this));
 
-        assertEq(validator.lut(), now);
+        assertEq(validator.lut_E4m(), now);
         assertEq(oracleRelayer.redemptionPrice(), TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(oracleRelayer.redemptionRate(), TWENTY_SEVEN_DECIMAL_NUMBER);
-        (uint timestamp, int timeAdjustedDeviation) = validator.dos(validator.oll() - 1);
+        (uint timestamp, int timeAdjustedDeviation) = validator.dos_bN5(validator.oll_reI() - 1);
         assertEq(timestamp, now);
         assertEq(timeAdjustedDeviation, 0);
     }
@@ -194,12 +194,12 @@ contract PScaledValidatorTest is DSTest {
     function test_get_annual_rate_no_warp_with_deviation() public {
         validator.modifyParameters("nb", uint(0.94E18));
 
-        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate(1.05E18, TWENTY_SEVEN_DECIMAL_NUMBER);
+        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate_xlS(1.05E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 1E27);
         assertEq(pTerm, -0.05E27);
         assertEq(rateTimeline, SPY);
 
-        (newRate, pTerm, rateTimeline) = validator.getNextRedemptionRate(0.995E18, TWENTY_SEVEN_DECIMAL_NUMBER);
+        (newRate, pTerm, rateTimeline) = validator.getNextRedemptionRate_xlS(0.995E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 1E27);
         assertEq(pTerm, 0.005E27);
         assertEq(rateTimeline, SPY);
@@ -209,12 +209,12 @@ contract PScaledValidatorTest is DSTest {
 
         hevm.warp(now + validator.ps() * 2);
 
-        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate(1.05E18, TWENTY_SEVEN_DECIMAL_NUMBER);
+        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate_xlS(1.05E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 1E27);
         assertEq(pTerm, -0.05E27);
         assertEq(rateTimeline, SPY);
 
-        (newRate, pTerm, rateTimeline) = validator.getNextRedemptionRate(0.995E18, TWENTY_SEVEN_DECIMAL_NUMBER);
+        (newRate, pTerm, rateTimeline) = validator.getNextRedemptionRate_xlS(0.995E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 1E27);
         assertEq(pTerm, 0.005E27);
         assertEq(rateTimeline, SPY);
@@ -225,7 +225,7 @@ contract PScaledValidatorTest is DSTest {
         orcl.updateTokenPrice(1.05E18);
         hevm.warp(now + validator.ps() * 2);
 
-        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate(1.05E18, TWENTY_SEVEN_DECIMAL_NUMBER);
+        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate_xlS(1.05E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 0.95E27);
         assertEq(pTerm, -0.05E27);
         assertEq(rateTimeline, SPY);
@@ -239,7 +239,7 @@ contract PScaledValidatorTest is DSTest {
 
         orcl.updateTokenPrice(0.95E18);
 
-        (newRate, pTerm, rateTimeline) = validator.getNextRedemptionRate(0.95E18, oracleRelayer.redemptionPrice());
+        (newRate, pTerm, rateTimeline) = validator.getNextRedemptionRate_xlS(0.95E18, oracleRelayer.redemptionPrice());
         assertEq(newRate, 1049988874676941814727119119);
         assertEq(pTerm, 49988874676941814727119119);
         assertEq(rateTimeline, SPY);
@@ -253,7 +253,7 @@ contract PScaledValidatorTest is DSTest {
         hevm.warp(now + validator.ps() * 2);
         orcl.updateTokenPrice(1.99E18);
 
-        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate(1.99E18, TWENTY_SEVEN_DECIMAL_NUMBER);
+        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate_xlS(1.99E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 1E25);
         assertEq(pTerm, -99E25);
         assertEq(rateTimeline, SPY);
@@ -266,7 +266,7 @@ contract PScaledValidatorTest is DSTest {
         hevm.warp(now + validator.ps() * 2);
         orcl.updateTokenPrice(0.01E18);
 
-        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate(0.01E18, TWENTY_SEVEN_DECIMAL_NUMBER);
+        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate_xlS(0.01E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 1.99E27);
         assertEq(pTerm, 99E25);
         assertEq(rateTimeline, SPY);
@@ -280,7 +280,7 @@ contract PScaledValidatorTest is DSTest {
         hevm.warp(now + validator.ps() * 2);
         orcl.updateTokenPrice(0.5E18);
 
-        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate(0.5E18, TWENTY_SEVEN_DECIMAL_NUMBER);
+        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate_xlS(0.5E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 6E27);
         assertEq(pTerm, 50E25);
         assertEq(rateTimeline, SPY);
@@ -294,7 +294,7 @@ contract PScaledValidatorTest is DSTest {
         hevm.warp(now + validator.ps() * 2);
         orcl.updateTokenPrice(1.5E18);
 
-        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate(1.5E18, TWENTY_SEVEN_DECIMAL_NUMBER);
+        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate_xlS(1.5E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 1);
         assertEq(pTerm, -5E26);
         assertEq(rateTimeline, 6307200);
@@ -318,7 +318,7 @@ contract PScaledValidatorTest is DSTest {
         hevm.warp(now + validator.ps() * 2);
         orcl.updateTokenPrice(1.52E18);
 
-        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate(1.52E18, TWENTY_SEVEN_DECIMAL_NUMBER);
+        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate_xlS(1.52E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 1);
         assertEq(pTerm, -0.52E27);
         assertEq(rateTimeline, 6064615);
@@ -341,7 +341,7 @@ contract PScaledValidatorTest is DSTest {
         hevm.warp(now + validator.ps() * 2);
         orcl.updateTokenPrice(2E18);
 
-        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate(2E18, TWENTY_SEVEN_DECIMAL_NUMBER);
+        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate_xlS(2E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 1);
         assertEq(pTerm, -1E27);
         assertEq(rateTimeline, SPY);
@@ -364,7 +364,7 @@ contract PScaledValidatorTest is DSTest {
         hevm.warp(now + validator.ps() * 2);
         orcl.updateTokenPrice(1.05E18);
 
-        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate(1.05E18, TWENTY_SEVEN_DECIMAL_NUMBER);
+        (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate_xlS(1.05E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 0.95E27);
         assertEq(pTerm, -0.05E27);
         assertEq(rateTimeline, SPY);
@@ -373,7 +373,7 @@ contract PScaledValidatorTest is DSTest {
 
         hevm.warp(now + validator.ps() * 2);
 
-        (newRate, pTerm, rateTimeline) = validator.getNextRedemptionRate(1.05E18, oracleRelayer.redemptionPrice());
+        (newRate, pTerm, rateTimeline) = validator.getNextRedemptionRate_xlS(1.05E18, oracleRelayer.redemptionPrice());
         assertEq(newRate, 949987703590304111014184290);
         assertEq(pTerm, -50012296409695888985815710);
         assertEq(rateTimeline, SPY);

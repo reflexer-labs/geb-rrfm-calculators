@@ -23,8 +23,8 @@ import "../../math/SignedSafeMath.sol";
 contract PIScaledValidator is SafeMath, SignedSafeMath {
     // --- Authorities ---
     mapping (address => uint) public authorities;
-    function addAuthority(address account) external isAuthority { authorities[account] = 1; }
-    function removeAuthority(address account) external isAuthority { authorities[account] = 0; }
+    function addAuthority_BXs(address account) external isAuthority update { authorities[account] = 1; }
+    function removeAuthority_Qd5(address account) external isAuthority update { authorities[account] = 0; }
     modifier isAuthority {
         require(authorities[msg.sender] == 1, "PIScaledValidator/not-an-authority");
         _;
@@ -32,10 +32,15 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
 
     // --- Readers ---
     mapping (address => uint) public readers;
-    function addReader(address account) external isAuthority { readers[account] = 1; }
-    function removeReader(address account) external isAuthority { readers[account] = 0; }
+    function addReader_ayP(address account) external update isAuthority { readers[account] = 1; }
+    function removeReader_xT_(address account) external update isAuthority { readers[account] = 0; }
     modifier isReader {
         require(readers[msg.sender] == 1, "PIScaledValidator/not-a-reader");
+        _;
+    }
+
+    modifier update() {
+        getNextRedemptionRate_xlS(1, 1, 0);
         _;
     }
 
@@ -136,12 +141,12 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
     }
 
     // --- Administration ---
-    function setSeedProposer(address addr) external isAuthority {
+    function setSeedProposer(address addr) external update isAuthority {
         readers[seedProposer] = 0;
         seedProposer = addr;
         readers[seedProposer] = 1;
     }
-    function modifyParameters(bytes32 parameter, address addr) external isAuthority {
+    function modifyParameters(bytes32 parameter, address addr) external update isAuthority {
         if (parameter == "seedProposer") {
           readers[seedProposer] = 0;
           seedProposer = addr;
@@ -149,7 +154,7 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
         }
         else revert("PIScaledValidator/modify-unrecognized-param");
     }
-    function modifyParameters(bytes32 parameter, uint256 val) external isAuthority {
+    function modifyParameters(bytes32 parameter, uint256 val) external update isAuthority {
         if (parameter == "nb") {
           require(val <= EIGHTEEN_DECIMAL_NUMBER, "PIScaledValidator/invalid-nb");
           noiseBarrier = val;
@@ -191,7 +196,7 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
         }
         else revert("PIScaledValidator/modify-unrecognized-param");
     }
-    function modifyParameters(bytes32 parameter, int256 val) external isAuthority {
+    function modifyParameters(bytes32 parameter, int256 val) external update isAuthority {
         if (parameter == "folb") {
           require(val < 0, "PIScaledValidator/invalid-folb");
           feedbackOutputLowerBound = val;
@@ -212,21 +217,21 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
     }
 
     // --- PI Utils ---
-    function getLastProportionalTerm() public isReader view returns (int256) {
-        if (oll() == 0) return 0;
-        return deviationObservations[oll() - 1].proportional;
+    function getLastProportionalTerm_sxm() public isReader update view returns (int256) {
+        if (oll_reI() == 0) return 0;
+        return deviationObservations[oll_reI() - 1].proportional;
     }
-    function getLastIntegralTerm() public isReader view returns (int256) {
-        if (oll() == 0) return 0;
-        return deviationObservations[oll() - 1].integral;
+    function getLastIntegralTerm_K1J() public isReader view update returns (int256) {
+        if (oll_reI() == 0) return 0;
+        return deviationObservations[oll_reI() - 1].integral;
     }
     /**
     * @notice Get the observation list length
     **/
-    function oll() public isReader view returns (uint256) {
+    function oll_reI() public isReader view update returns (uint256) {
         return deviationObservations.length;
     }
-    function getBoundedRedemptionRate(int piOutput) public isReader view returns (uint256, uint256) {
+    function getBoundedRedemptionRate_FZ1(int piOutput) public isReader view update returns (uint256, uint256) {
         int  boundedPIOutput = piOutput;
         uint newRedemptionRate;
         uint rateTimeline = SPY;
@@ -254,11 +259,11 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
 
         return (newRedemptionRate, rateTimeline);
     }
-    function breaksNoiseBarrier(uint piSum, uint redemptionPrice) public isReader view returns (bool) {
+    function breaksNoiseBarrier_p7i(uint piSum, uint redemptionPrice) public isReader update view returns (bool) {
         uint deltaNoise = subtract(multiply(uint(2), EIGHTEEN_DECIMAL_NUMBER), noiseBarrier);
         return piSum >= subtract(divide(multiply(redemptionPrice, deltaNoise), EIGHTEEN_DECIMAL_NUMBER), redemptionPrice);
     }
-    function correctPreComputedRate(uint precomputedRate, uint contractComputedRate, uint precomputedAllowedDeviation) public isReader view returns (bool) {
+    function correctPreComputedRate_kXS(uint precomputedRate, uint contractComputedRate, uint precomputedAllowedDeviation) public update isReader view returns (bool) {
         if (precomputedRate == contractComputedRate) return true;
         bool withinBounds = (
           precomputedRate >= divide(multiply(contractComputedRate, precomputedAllowedDeviation), EIGHTEEN_DECIMAL_NUMBER) &&
@@ -273,8 +278,8 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
         }
         return (withinBounds && sameSign);
     }
-    function getNextPriceDeviationCumulative(int proportionalTerm, uint accumulatedLeak) public isReader view returns (int256, int256) {
-        int256 lastProportionalTerm      = getLastProportionalTerm();
+    function getNextPriceDeviationCumulative_EtB(int proportionalTerm, uint accumulatedLeak) public update isReader view returns (int256, int256) {
+        int256 lastProportionalTerm      = getLastProportionalTerm_sxm();
         uint256 timeElapsed              = (lastUpdateTime == 0) ? 0 : subtract(now, lastUpdateTime);
         int256 newTimeAdjustedDeviation  = multiply(riemannSum(proportionalTerm, lastProportionalTerm), int(timeElapsed));
         int256 leakedPriceCumulative     = divide(multiply(int(accumulatedLeak), priceDeviationCumulative), int(TWENTY_SEVEN_DECIMAL_NUMBER));
@@ -284,11 +289,11 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
           newTimeAdjustedDeviation
         );
     }
-    function getGainAdjustedPIOutput(int proportionalTerm, int integralTerm) public isReader view returns (int256) {
-        (int adjustedProportional, int adjustedIntegral) = getGainAdjustedTerms(proportionalTerm, integralTerm);
+    function getGainAdjustedPIOutput_99J(int proportionalTerm, int integralTerm) public isReader update view returns (int256) {
+        (int adjustedProportional, int adjustedIntegral) = getGainAdjustedTerms_ant(proportionalTerm, integralTerm);
         return addition(adjustedProportional, adjustedIntegral);
     }
-    function getGainAdjustedTerms(int proportionalTerm, int integralTerm) public isReader view returns (int256, int256) {
+    function getGainAdjustedTerms_ant(int proportionalTerm, int integralTerm) public isReader update view returns (int256, int256) {
         bool pTermExceedsMaxUint = (absolute(proportionalTerm) >= uint(-1) / controllerGains.Kp);
         bool iTermExceedsMaxUint = (controllerGains.Ki == 0) ? false : (absolute(integralTerm) >= uint(-1) / controllerGains.Ki);
 
@@ -315,25 +320,25 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
         // Calculate proportional term
         int256 proportionalTerm = multiply(subtract(int(redemptionPrice), int(scaledMarketPrice)), int(TWENTY_SEVEN_DECIMAL_NUMBER)) / int(redemptionPrice);
         // Update deviation history
-        updateDeviationHistory(proportionalTerm, accumulatedLeak);
+        updateDeviationHistory_nqa(proportionalTerm, accumulatedLeak);
         // Update timestamp
         lastUpdateTime = now;
         // Calculate the adjusted PI output
-        int piOutput = getGainAdjustedPIOutput(proportionalTerm, priceDeviationCumulative);
+        int piOutput = getGainAdjustedPIOutput_99J(proportionalTerm, priceDeviationCumulative);
         // Check if P + I is greater than noise and non null
         if (
-          breaksNoiseBarrier(absolute(piOutput), redemptionPrice) &&
+          breaksNoiseBarrier_p7i(absolute(piOutput), redemptionPrice) &&
           piOutput != 0
         ) {
           // Make sure the annual rate doesn't exceed the bounds
-          (uint newRedemptionRate, ) = getBoundedRedemptionRate(piOutput);
+          (uint newRedemptionRate, ) = getBoundedRedemptionRate_FZ1(piOutput);
           // Sanitize the precomputed allowed deviation
           uint256 sanitizedAllowedDeviation =
             (precomputedAllowedDeviation < upperPrecomputedRateAllowedDeviation) ?
             upperPrecomputedRateAllowedDeviation : precomputedAllowedDeviation;
           // Check that the caller provided a correct precomputed rate
           require(
-            correctPreComputedRate(inputAccumulatedPreComputedRate, newRedemptionRate, sanitizedAllowedDeviation),
+            correctPreComputedRate_kXS(inputAccumulatedPreComputedRate, newRedemptionRate, sanitizedAllowedDeviation),
             "PIScaledValidator/invalid-seed"
           );
           return 1;
@@ -342,29 +347,30 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
         }
     }
     // Update accumulator and deviation history
-    function updateDeviationHistory(int proportionalTerm, uint accumulatedLeak) internal {
+    function updateDeviationHistory_nqa(int proportionalTerm, uint accumulatedLeak) internal {
         (int256 virtualDeviationCumulative, int256 nextTimeAdjustedDeviation) =
-          getNextPriceDeviationCumulative(proportionalTerm, accumulatedLeak);
+          getNextPriceDeviationCumulative_EtB(proportionalTerm, accumulatedLeak);
         priceDeviationCumulative = virtualDeviationCumulative;
         deviationObservations.push(DeviationObservation(now, proportionalTerm, priceDeviationCumulative));
     }
-    function getNextRedemptionRate(uint marketPrice, uint redemptionPrice, uint accumulatedLeak)
+
+    function getNextRedemptionRate_xlS(uint marketPrice, uint redemptionPrice, uint accumulatedLeak)
       public isReader view returns (uint256, int256, int256, uint256) {
         // Get the scaled market price
         uint256 scaledMarketPrice = multiply(marketPrice, 10**9);
         // Calculate proportional term
         int256 proportionalTerm = multiply(subtract(int(redemptionPrice), int(scaledMarketPrice)), int(TWENTY_SEVEN_DECIMAL_NUMBER)) / int(redemptionPrice);
         // Get cumulative price deviation
-        (int cumulativeDeviation, ) = getNextPriceDeviationCumulative(proportionalTerm, accumulatedLeak);
+        (int cumulativeDeviation, ) = getNextPriceDeviationCumulative_EtB(proportionalTerm, accumulatedLeak);
         // Calculate the PI output
-        int piOutput = getGainAdjustedPIOutput(proportionalTerm, cumulativeDeviation);
+        int piOutput = getGainAdjustedPIOutput_99J(proportionalTerm, cumulativeDeviation);
         // Check if P + I is greater than noise
         if (
-          breaksNoiseBarrier(absolute(piOutput), redemptionPrice) &&
+          breaksNoiseBarrier_p7i(absolute(piOutput), redemptionPrice) &&
           piOutput != 0
         ) {
           // Get the new rate as well as the timeline
-          (uint newRedemptionRate, uint rateTimeline) = getBoundedRedemptionRate(piOutput);
+          (uint newRedemptionRate, uint rateTimeline) = getBoundedRedemptionRate_FZ1(piOutput);
           // Return the bounded result
           return (newRedemptionRate, proportionalTerm, cumulativeDeviation, rateTimeline);
         } else {
@@ -375,55 +381,55 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
 
     // --- Parameter Getters ---
     function rt(uint marketPrice, uint redemptionPrice, uint accumulatedLeak) external isReader view returns (uint256) {
-        (, , , uint rateTimeline) = getNextRedemptionRate(marketPrice, redemptionPrice, accumulatedLeak);
+        (, , , uint rateTimeline) = getNextRedemptionRate_xlS(marketPrice, redemptionPrice, accumulatedLeak);
         return rateTimeline;
     }
-    function sg() external isReader view returns (uint256) {
+    function sg_ME1() external isReader update view returns (uint256) {
         return controllerGains.Kp;
     }
-    function ag() external isReader view returns (uint256) {
+    function ag_UIB() external isReader update view returns (uint256) {
         return controllerGains.Ki;
     }
-    function nb() external isReader view returns (uint256) {
+    function nb_9Y5() external isReader view returns (uint256) {
         return noiseBarrier;
     }
-    function drr() external isReader view returns (uint256) {
+    function drr_f0j() external isReader update view returns (uint256) {
         return defaultRedemptionRate;
     }
-    function foub() external isReader view returns (uint256) {
+    function foub_TvR() external isReader update view returns (uint256) {
         return feedbackOutputUpperBound;
     }
-    function folb() external isReader view returns (int256) {
+    function folb_tas() external isReader update view returns (int256) {
         return feedbackOutputLowerBound;
     }
-    function ips() external isReader view returns (uint256) {
+    function ips_uFJ() external isReader update view returns (uint256) {
         return integralPeriodSize;
     }
-    function dos(uint256 i) external isReader view returns (uint256, int256, int256) {
+    function dos_bN5(uint256 i) external isReader update view returns (uint256, int256, int256) {
         return (deviationObservations[i].timestamp, deviationObservations[i].proportional, deviationObservations[i].integral);
     }
-    function pdc() external isReader view returns (int256) {
+    function pdc_cxU() external isReader update view returns (int256) {
         return priceDeviationCumulative;
     }
-    function pscl() external isReader view returns (uint256) {
+    function pscl() external isReader update view returns (uint256) {
         return perSecondCumulativeLeak;
     }
-    function lprad() external isReader view returns (uint256) {
+    function lprad() external isReader update view returns (uint256) {
         return lowerPrecomputedRateAllowedDeviation;
     }
-    function uprad() external isReader view returns (uint256) {
+    function uprad_45M() external isReader update view returns (uint256) {
         return upperPrecomputedRateAllowedDeviation;
     }
-    function adi() external isReader view returns (uint256) {
+    function adi() external isReader update view returns (uint256) {
         return allowedDeviationIncrease;
     }
-    function mrt() external isReader view returns (uint256) {
+    function mrt_vW0() external isReader update view returns (uint256) {
         return minRateTimeline;
     }
-    function lut() external isReader view returns (uint256) {
+    function lut_E4m() external isReader update view returns (uint256) {
         return lastUpdateTime;
     }
-    function tlv() external isReader view returns (uint256) {
+    function tlv() external isReader update view returns (uint256) {
         uint elapsed = (lastUpdateTime == 0) ? 0 : subtract(now, lastUpdateTime);
         return elapsed;
     }
