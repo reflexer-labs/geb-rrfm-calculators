@@ -130,21 +130,21 @@ contract PIRawValidatorTest is DSTest {
         assertEq(validator.readers(address(rateSetter)), 1);
         assertEq(validator.authorities(address(this)), 1);
 
-        assertEq(validator.nb(), noiseBarrier);
-        assertEq(validator.foub(), feedbackOutputUpperBound);
-        assertEq(validator.folb(), feedbackOutputLowerBound);
-        assertEq(validator.lut(), 0);
-        assertEq(validator.ips(), integralPeriodSize);
-        assertEq(validator.pdc(), 0);
+        assertEq(validator.nb_9Y5(), noiseBarrier);
+        assertEq(validator.foub_TvR(), feedbackOutputUpperBound);
+        assertEq(validator.folb_tas(), feedbackOutputLowerBound);
+        assertEq(validator.lut_E4m(), 0);
+        assertEq(validator.ips_uFJ(), integralPeriodSize);
+        assertEq(validator.pdc_cxU(), 0);
         assertEq(validator.lprad(), lowerPrecomputedRateAllowedDeviation);
-        assertEq(validator.uprad(), upperPrecomputedRateAllowedDeviation);
+        assertEq(validator.uprad_45M(), upperPrecomputedRateAllowedDeviation);
         assertEq(validator.adi(), allowedDeviationIncrease);
         assertEq(validator.pscl(), perSecondCumulativeLeak);
-        assertEq(validator.drr(), TWENTY_SEVEN_DECIMAL_NUMBER);
-        assertEq(Kp, validator.ag());
-        assertEq(Ki, validator.sg());
-        assertEq(validator.oll(), 0);
-        assertEq(validator.mrt(), 0);
+        assertEq(validator.drr_f0j(), TWENTY_SEVEN_DECIMAL_NUMBER);
+        assertEq(Kp, validator.ag_UIB());
+        assertEq(Ki, validator.sg_ME1());
+        assertEq(validator.oll_reI(), 0);
+        assertEq(validator.mrt_vW0(), 0);
         assertEq(validator.tlv(), 0);
     }
     function test_modify_parameters() public {
@@ -158,19 +158,19 @@ contract PIRawValidatorTest is DSTest {
         validator.modifyParameters("pscl", uint(TWENTY_SEVEN_DECIMAL_NUMBER - 5));
         validator.modifyParameters("mrt", uint(24 * 3600));
 
-        assertEq(validator.nb(), EIGHTEEN_DECIMAL_NUMBER);
-        assertEq(validator.ips(), uint(2));
-        assertEq(validator.foub(), uint(TWENTY_SEVEN_DECIMAL_NUMBER + 1));
-        assertEq(validator.folb(), -int(1));
+        assertEq(validator.nb_9Y5(), EIGHTEEN_DECIMAL_NUMBER);
+        assertEq(validator.ips_uFJ(), uint(2));
+        assertEq(validator.foub_TvR(), uint(TWENTY_SEVEN_DECIMAL_NUMBER + 1));
+        assertEq(validator.folb_tas(), -int(1));
         assertEq(validator.pscl(), TWENTY_SEVEN_DECIMAL_NUMBER - 5);
-        assertEq(validator.mrt(), uint(24 * 3600));
+        assertEq(validator.mrt_vW0(), uint(24 * 3600));
 
-        assertEq(uint(1), validator.ag());
-        assertEq(uint(1), validator.sg());
+        assertEq(uint(1), validator.ag_UIB());
+        assertEq(uint(1), validator.sg_ME1());
     }
     function test_get_new_rate_no_proportional_no_integral() public {
         (uint newRedemptionRate, int pTerm, int iTerm, uint rateTimeline) =
-          validator.getNextRedemptionRate(EIGHTEEN_DECIMAL_NUMBER, TWENTY_SEVEN_DECIMAL_NUMBER, rateSetter.iapcr());
+          validator.getNextRedemptionRate_xlS(EIGHTEEN_DECIMAL_NUMBER, TWENTY_SEVEN_DECIMAL_NUMBER, rateSetter.iapcr());
         assertEq(newRedemptionRate, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(pTerm, 0);
         assertEq(iTerm, 0);
@@ -181,35 +181,35 @@ contract PIRawValidatorTest is DSTest {
         assertEq(validator.readers(address(rateSetter)), 1);
         assertEq(validator.authorities(address(this)), 1);
 
-        assertEq(validator.nb(), noiseBarrier);
-        assertEq(validator.foub(), feedbackOutputUpperBound);
-        assertEq(validator.folb(), feedbackOutputLowerBound);
-        assertEq(validator.lut(), 0);
-        assertEq(validator.ips(), integralPeriodSize);
-        assertEq(validator.pdc(), 0);
+        assertEq(validator.nb_9Y5(), noiseBarrier);
+        assertEq(validator.foub_TvR(), feedbackOutputUpperBound);
+        assertEq(validator.folb_tas(), feedbackOutputLowerBound);
+        assertEq(validator.lut_E4m(), 0);
+        assertEq(validator.ips_uFJ(), integralPeriodSize);
+        assertEq(validator.pdc_cxU(), 0);
         assertEq(validator.lprad(), lowerPrecomputedRateAllowedDeviation);
-        assertEq(validator.uprad(), upperPrecomputedRateAllowedDeviation);
+        assertEq(validator.uprad_45M(), upperPrecomputedRateAllowedDeviation);
         assertEq(validator.adi(), allowedDeviationIncrease);
         assertEq(validator.pscl(), perSecondCumulativeLeak);
-        assertEq(validator.drr(), TWENTY_SEVEN_DECIMAL_NUMBER);
-        assertEq(Kp, validator.ag());
-        assertEq(Ki, validator.sg());
-        assertEq(validator.oll(), 0);
-        assertEq(validator.mrt(), 0);
+        assertEq(validator.drr_f0j(), TWENTY_SEVEN_DECIMAL_NUMBER);
+        assertEq(Kp, validator.ag_UIB());
+        assertEq(Ki, validator.sg_ME1());
+        assertEq(validator.oll_reI(), 0);
+        assertEq(validator.mrt_vW0(), 0);
         assertEq(validator.tlv(), 0);
     }
     function test_first_update_rate_no_deviation() public {
-        hevm.warp(now + validator.ips() + 1);
+        hevm.warp(now + validator.ips_uFJ() + 1);
 
         rateSetter.updateRate(TWENTY_SEVEN_DECIMAL_NUMBER, address(this));
-        assertEq(uint(validator.lut()), now);
-        assertEq(uint(validator.pdc()), 0);
+        assertEq(uint(validator.lut_E4m()), now);
+        assertEq(uint(validator.pdc_cxU()), 0);
 
         assertEq(oracleRelayer.redemptionPrice(), TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(oracleRelayer.redemptionRate(), TWENTY_SEVEN_DECIMAL_NUMBER);
 
         (uint timestamp, int proportional, int integral) =
-          validator.dos(validator.oll() - 1);
+          validator.dos_bN5(validator.oll_reI() - 1);
 
         assertEq(timestamp, now);
         assertEq(proportional, 0);
@@ -218,11 +218,11 @@ contract PIRawValidatorTest is DSTest {
     function testFail_update_invalid_market_price() public {
         orcl = new Feed(1 ether, false);
         rateSetter.modifyParameters("orcl", address(orcl));
-        hevm.warp(now + validator.ips() + 1);
+        hevm.warp(now + validator.ips_uFJ() + 1);
         rateSetter.updateRate(TWENTY_SEVEN_DECIMAL_NUMBER, address(this));
     }
     function testFail_update_same_period_warp() public {
-        hevm.warp(now + validator.ips() + 1);
+        hevm.warp(now + validator.ips_uFJ() + 1);
         rateSetter.updateRate(TWENTY_SEVEN_DECIMAL_NUMBER, address(this));
         rateSetter.updateRate(TWENTY_SEVEN_DECIMAL_NUMBER, address(this));
     }
@@ -236,7 +236,7 @@ contract PIRawValidatorTest is DSTest {
         orcl.updateTokenPrice(1.05E18); // 5% deviation
 
         (uint newRedemptionRate, int pTerm, int iTerm, uint rateTimeline) =
-          validator.getNextRedemptionRate(1.05E18, TWENTY_SEVEN_DECIMAL_NUMBER, rateSetter.iapcr());
+          validator.getNextRedemptionRate_xlS(1.05E18, TWENTY_SEVEN_DECIMAL_NUMBER, rateSetter.iapcr());
         assertEq(newRedemptionRate, 1E27);
         assertEq(pTerm, -0.05E27);
         assertEq(iTerm, 0);
@@ -245,22 +245,22 @@ contract PIRawValidatorTest is DSTest {
         orcl.updateTokenPrice(0.995E18); // -0.5% deviation
 
         (newRedemptionRate, pTerm, iTerm, rateTimeline) =
-          validator.getNextRedemptionRate(0.995E18, TWENTY_SEVEN_DECIMAL_NUMBER, rateSetter.iapcr());
+          validator.getNextRedemptionRate_xlS(0.995E18, TWENTY_SEVEN_DECIMAL_NUMBER, rateSetter.iapcr());
         assertEq(newRedemptionRate, 1E27);
         assertEq(pTerm, 0.005E27);
         assertEq(iTerm, 0);
         assertEq(rateTimeline, SPY);
     }
     function test_first_small_positive_deviation() public {
-        assertEq(uint(validator.pdc()), 0);
+        assertEq(uint(validator.pdc_cxU()), 0);
 
         validator.modifyParameters("nb", uint(0.995E18));
 
-        hevm.warp(now + validator.ips());
+        hevm.warp(now + validator.ips_uFJ());
         orcl.updateTokenPrice(1.05E18);
 
         (uint newRedemptionRate, int pTerm, int iTerm, uint rateTimeline) =
-          validator.getNextRedemptionRate(1.05E18, TWENTY_SEVEN_DECIMAL_NUMBER, rateSetter.iapcr());
+          validator.getNextRedemptionRate_xlS(1.05E18, TWENTY_SEVEN_DECIMAL_NUMBER, rateSetter.iapcr());
         assertEq(newRedemptionRate, 0.95E27);
         assertEq(pTerm, -0.05E27);
         assertEq(iTerm, 0);
@@ -268,29 +268,29 @@ contract PIRawValidatorTest is DSTest {
 
         rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% annual rate
 
-        assertEq(uint(validator.lut()), now);
-        assertEq(validator.pdc(), 0);
+        assertEq(uint(validator.lut_E4m()), now);
+        assertEq(validator.pdc_cxU(), 0);
         assertEq(oracleRelayer.redemptionPrice(), TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(oracleRelayer.redemptionRate(), 999999998373500306131523668);
 
         (uint timestamp, int proportional, int integral) =
-          validator.dos(validator.oll() - 1);
+          validator.dos_bN5(validator.oll_reI() - 1);
 
         assertEq(timestamp, now);
         assertEq(proportional, -0.05E27);
         assertEq(integral, 0);
     }
     function test_first_small_negative_deviation() public {
-        assertEq(uint(validator.pdc()), 0);
+        assertEq(uint(validator.pdc_cxU()), 0);
 
         validator.modifyParameters("nb", uint(0.995E18));
 
-        hevm.warp(now + validator.ips());
+        hevm.warp(now + validator.ips_uFJ());
 
         orcl.updateTokenPrice(0.95E18);
 
         (uint newRedemptionRate, int pTerm, int iTerm, uint rateTimeline) =
-          validator.getNextRedemptionRate(0.95E18, TWENTY_SEVEN_DECIMAL_NUMBER, rateSetter.iapcr());
+          validator.getNextRedemptionRate_xlS(0.95E18, TWENTY_SEVEN_DECIMAL_NUMBER, rateSetter.iapcr());
         assertEq(newRedemptionRate, 1.05E27);
         assertEq(pTerm, 0.05E27);
         assertEq(iTerm, 0);
@@ -299,18 +299,18 @@ contract PIRawValidatorTest is DSTest {
         rateSetter.updateRate(1000000001547125957863212448, address(this)); // 5% annual rate
     }
     function test_two_small_positive_deviations() public {
-        assertEq(uint(validator.pdc()), 0);
+        assertEq(uint(validator.pdc_cxU()), 0);
         validator.modifyParameters("nb", uint(0.995E18));
 
-        hevm.warp(now + validator.ips());
+        hevm.warp(now + validator.ips_uFJ());
 
         orcl.updateTokenPrice(1.05E18);
         rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% annual rate
 
-        hevm.warp(now + validator.ips());
+        hevm.warp(now + validator.ips_uFJ());
 
         (uint newRedemptionRate, int pTerm, int iTerm, uint rateTimeline) =
-          validator.getNextRedemptionRate(1.05E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
+          validator.getNextRedemptionRate_xlS(1.05E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
         assertEq(newRedemptionRate, 1);  // -99.9999999..9999%
         assertEq(pTerm, -50005855381759873721611980);
         assertEq(iTerm, -180010539687167772698901564000);
@@ -319,18 +319,18 @@ contract PIRawValidatorTest is DSTest {
         rateSetter.updateRate(999645093012998700600296211, address(this));
     }
     function test_big_delay_positive_deviation() public {
-        assertEq(uint(validator.pdc()), 0);
+        assertEq(uint(validator.pdc_cxU()), 0);
         validator.modifyParameters("nb", uint(0.995E18));
 
-        hevm.warp(now + validator.ips());
+        hevm.warp(now + validator.ips_uFJ());
 
         orcl.updateTokenPrice(1.05E18);
         rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% annual rate
 
-        hevm.warp(now + validator.ips() * 10); // 10 hours
+        hevm.warp(now + validator.ips_uFJ() * 10); // 10 hours
 
         (uint newRedemptionRate, int pTerm, int iTerm, uint rateTimeline) =
-          validator.getNextRedemptionRate(1.05E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
+          validator.getNextRedemptionRate_xlS(1.05E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
         assertEq(newRedemptionRate, 1);  // -99.9999999..9999%
         assertEq(pTerm, -50058552274775527605318195);
         assertEq(iTerm, -1801053940945959496895727492000);
@@ -339,18 +339,18 @@ contract PIRawValidatorTest is DSTest {
         rateSetter.updateRate(996455562634542433249365409, address(this));
     }
     function test_big_delay_negative_deviation() public {
-        assertEq(validator.pdc(), 0);
+        assertEq(validator.pdc_cxU(), 0);
         validator.modifyParameters("nb", uint(0.995E18));
 
-        hevm.warp(now + validator.ips());
+        hevm.warp(now + validator.ips_uFJ());
 
         orcl.updateTokenPrice(1.05E18);
         rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% annual rate
 
-        hevm.warp(now + validator.ips() * 10); // 10 hours
+        hevm.warp(now + validator.ips_uFJ() * 10); // 10 hours
 
         (uint newRedemptionRate, int pTerm, int iTerm, uint rateTimeline) =
-          validator.getNextRedemptionRate(1.05E18, oracleRelayer.redemptionRate(), rateSetter.iapcr());
+          validator.getNextRedemptionRate_xlS(1.05E18, oracleRelayer.redemptionRate(), rateSetter.iapcr());
         assertEq(newRedemptionRate, 1);  // -99.9999999..9999%
         assertEq(pTerm, -50000001626499693868476332);
         assertEq(iTerm, -1800000029276994489632573976000);
@@ -361,14 +361,14 @@ contract PIRawValidatorTest is DSTest {
     function test_deactivate_integral() public {
         validator.modifyParameters("ag", uint(0));
 
-        assertEq(uint(validator.pdc()), 0);
+        assertEq(uint(validator.pdc_cxU()), 0);
         validator.modifyParameters("nb", uint(0.995E18));
 
-        hevm.warp(now + validator.ips());
+        hevm.warp(now + validator.ips_uFJ());
 
         orcl.updateTokenPrice(1.05E18);
         (uint newRedemptionRate, int pTerm, int iTerm, uint rateTimeline) =
-          validator.getNextRedemptionRate(1.05E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
+          validator.getNextRedemptionRate_xlS(1.05E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
         assertEq(newRedemptionRate, 95E25);  // -5%
         assertEq(pTerm, -5E25);
         assertEq(iTerm, 0);
@@ -376,10 +376,10 @@ contract PIRawValidatorTest is DSTest {
 
         rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% annual rate
 
-        hevm.warp(now + validator.ips() * 10); // 10 hours
+        hevm.warp(now + validator.ips_uFJ() * 10); // 10 hours
 
         (newRedemptionRate, pTerm, iTerm, rateTimeline) =
-          validator.getNextRedemptionRate(1.05E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
+          validator.getNextRedemptionRate_xlS(1.05E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
         assertEq(newRedemptionRate, 949941447725224472394681805);
         assertEq(pTerm, -50058552274775527605318195);
         assertEq(iTerm, -1801053940945959496895727492000);
@@ -391,11 +391,11 @@ contract PIRawValidatorTest is DSTest {
         oracleRelayer.modifyParameters("redemptionPrice", 4.2E27);
         assertEq(oracleRelayer.redemptionPrice(), 4.2E27);
 
-        hevm.warp(now + validator.ips());
+        hevm.warp(now + validator.ips_uFJ());
         orcl.updateTokenPrice(4.62E18);
 
         (uint newRedemptionRate, int pTerm, int iTerm, uint rateTimeline) =
-          validator.getNextRedemptionRate(4.62E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
+          validator.getNextRedemptionRate_xlS(4.62E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
         assertEq(newRedemptionRate, 58E25);  // -42%
         assertEq(pTerm, -42E25);
         assertEq(iTerm, 0);
@@ -407,7 +407,7 @@ contract PIRawValidatorTest is DSTest {
         orcl.updateTokenPrice(2.435E18);
 
         (newRedemptionRate, pTerm, iTerm, rateTimeline) =
-          validator.getNextRedemptionRate(2.435E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
+          validator.getNextRedemptionRate_xlS(2.435E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
         assertEq(newRedemptionRate, 1000999999999999999959929186);
         assertEq(pTerm, 999999999999999959929186);
         assertEq(iTerm, -6606792000000000000631836595152000);
