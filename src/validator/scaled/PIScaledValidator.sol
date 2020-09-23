@@ -23,8 +23,8 @@ import "../../math/SignedSafeMath.sol";
 contract PIScaledValidator is SafeMath, SignedSafeMath {
     // --- Authorities ---
     mapping (address => uint) public authorities;
-    function addAuthority_BXs(address account) external isAuthority { authorities[account] = 1; }
-    function removeAuthority_Qd5(address account) external isAuthority { authorities[account] = 0; }
+    function addAuthority_BXs(address account) external isAuthority update { authorities[account] = 1; }
+    function removeAuthority_Qd5(address account) external isAuthority update { authorities[account] = 0; }
     modifier isAuthority {
         require(authorities[msg.sender] == 1, "PIScaledValidator/not-an-authority");
         _;
@@ -32,8 +32,8 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
 
     // --- Readers ---
     mapping (address => uint) public readers;
-    function addReader_ayP(address account) external isAuthority { readers[account] = 1; }
-    function removeReader_xT_(address account) external isAuthority { readers[account] = 0; }
+    function addReader_ayP(address account) external update isAuthority { readers[account] = 1; }
+    function removeReader_xT_(address account) external update isAuthority { readers[account] = 0; }
     modifier isReader {
         require(readers[msg.sender] == 1, "PIScaledValidator/not-a-reader");
         _;
@@ -141,12 +141,12 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
     }
 
     // --- Administration ---
-    function setSeedProposer(address addr) external isAuthority {
+    function setSeedProposer(address addr) external update isAuthority {
         readers[seedProposer] = 0;
         seedProposer = addr;
         readers[seedProposer] = 1;
     }
-    function modifyParameters(bytes32 parameter, address addr) external isAuthority {
+    function modifyParameters(bytes32 parameter, address addr) external update isAuthority {
         if (parameter == "seedProposer") {
           readers[seedProposer] = 0;
           seedProposer = addr;
@@ -154,7 +154,7 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
         }
         else revert("PIScaledValidator/modify-unrecognized-param");
     }
-    function modifyParameters(bytes32 parameter, uint256 val) external isAuthority {
+    function modifyParameters(bytes32 parameter, uint256 val) external update isAuthority {
         if (parameter == "nb") {
           require(val <= EIGHTEEN_DECIMAL_NUMBER, "PIScaledValidator/invalid-nb");
           noiseBarrier = val;
@@ -196,7 +196,7 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
         }
         else revert("PIScaledValidator/modify-unrecognized-param");
     }
-    function modifyParameters(bytes32 parameter, int256 val) external isAuthority {
+    function modifyParameters(bytes32 parameter, int256 val) external update isAuthority {
         if (parameter == "folb") {
           require(val < 0, "PIScaledValidator/invalid-folb");
           feedbackOutputLowerBound = val;
@@ -217,7 +217,7 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
     }
 
     // --- PI Utils ---
-    function getLastProportionalTerm_sxm() public isReader view update returns (int256) {
+    function getLastProportionalTerm_sxm() public isReader update view returns (int256) {
         if (oll_reI() == 0) return 0;
         return deviationObservations[oll_reI() - 1].proportional;
     }
@@ -228,10 +228,10 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
     /**
     * @notice Get the observation list length
     **/
-    function oll_reI() public isReader view returns (uint256) {
+    function oll_reI() public isReader view update returns (uint256) {
         return deviationObservations.length;
     }
-    function getBoundedRedemptionRate_FZ1(int piOutput) public isReader view returns (uint256, uint256) {
+    function getBoundedRedemptionRate_FZ1(int piOutput) public isReader view update returns (uint256, uint256) {
         int  boundedPIOutput = piOutput;
         uint newRedemptionRate;
         uint rateTimeline = SPY;
@@ -259,11 +259,11 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
 
         return (newRedemptionRate, rateTimeline);
     }
-    function breaksNoiseBarrier_p7i(uint piSum, uint redemptionPrice) public isReader view returns (bool) {
+    function breaksNoiseBarrier_p7i(uint piSum, uint redemptionPrice) public isReader update view returns (bool) {
         uint deltaNoise = subtract(multiply(uint(2), EIGHTEEN_DECIMAL_NUMBER), noiseBarrier);
         return piSum >= subtract(divide(multiply(redemptionPrice, deltaNoise), EIGHTEEN_DECIMAL_NUMBER), redemptionPrice);
     }
-    function correctPreComputedRate_kXS(uint precomputedRate, uint contractComputedRate, uint precomputedAllowedDeviation) public isReader view returns (bool) {
+    function correctPreComputedRate_kXS(uint precomputedRate, uint contractComputedRate, uint precomputedAllowedDeviation) public update isReader view returns (bool) {
         if (precomputedRate == contractComputedRate) return true;
         bool withinBounds = (
           precomputedRate >= divide(multiply(contractComputedRate, precomputedAllowedDeviation), EIGHTEEN_DECIMAL_NUMBER) &&
@@ -278,7 +278,7 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
         }
         return (withinBounds && sameSign);
     }
-    function getNextPriceDeviationCumulative_EtB(int proportionalTerm, uint accumulatedLeak) public isReader view returns (int256, int256) {
+    function getNextPriceDeviationCumulative_EtB(int proportionalTerm, uint accumulatedLeak) public update isReader view returns (int256, int256) {
         int256 lastProportionalTerm      = getLastProportionalTerm_sxm();
         uint256 timeElapsed              = (lastUpdateTime == 0) ? 0 : subtract(now, lastUpdateTime);
         int256 newTimeAdjustedDeviation  = multiply(riemannSum(proportionalTerm, lastProportionalTerm), int(timeElapsed));
@@ -289,7 +289,7 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
           newTimeAdjustedDeviation
         );
     }
-    function getGainAdjustedPIOutput_99J(int proportionalTerm, int integralTerm) public isReader view returns (int256) {
+    function getGainAdjustedPIOutput_99J(int proportionalTerm, int integralTerm) public isReader update view returns (int256) {
         (int adjustedProportional, int adjustedIntegral) = getGainAdjustedTerms_ant(proportionalTerm, integralTerm);
         return addition(adjustedProportional, adjustedIntegral);
     }
