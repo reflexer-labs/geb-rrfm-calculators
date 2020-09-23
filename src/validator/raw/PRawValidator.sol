@@ -37,8 +37,8 @@ abstract contract StabilityFeeTreasuryLike {
 contract PRawValidator is SafeMath, SignedSafeMath {
     // --- Authorities ---
     mapping (address => uint) public authorities;
-    function addAuthority_BXs(address account) external update isAuthority { authorities[account] = 1; }
-    function removeAuthority_Qd5(address account) external update isAuthority { authorities[account] = 0; }
+    function addAuthority(address account) external isAuthority { authorities[account] = 1; }
+    function removeAuthority(address account) external isAuthority { authorities[account] = 0; }
     modifier isAuthority {
         require(authorities[msg.sender] == 1, "PRawValidator/not-an-authority");
         _;
@@ -46,15 +46,10 @@ contract PRawValidator is SafeMath, SignedSafeMath {
 
     // --- Readers ---
     mapping (address => uint) public readers;
-    function addReader_ayP(address account) external update isAuthority { readers[account] = 1; }
-    function removeReader_xT_(address account) external update isAuthority { readers[account] = 0; }
+    function addReader(address account) external isAuthority { readers[account] = 1; }
+    function removeReader(address account) external isAuthority { readers[account] = 0; }
     modifier isReader {
         require(readers[msg.sender] == 1, "PRawValidator/not-a-reader");
-        _;
-    }
-
-    modifier update() {
-        // getNextRedemptionRate_xlS(1, 1);
         _;
     }
 
@@ -145,12 +140,12 @@ contract PRawValidator is SafeMath, SignedSafeMath {
     }
 
     // --- Administration ---
-    function setSeedProposer(address addr) external update isAuthority {
+    function setSeedProposer(address addr) external isAuthority {
         readers[seedProposer] = 0;
         seedProposer = addr;
         readers[seedProposer] = 1;
     }
-    function modifyParameters(bytes32 parameter, address addr) external update isAuthority {
+    function modifyParameters(bytes32 parameter, address addr) external isAuthority {
         if (parameter == "seedProposer") {
           readers[seedProposer] = 0;
           seedProposer = addr;
@@ -158,7 +153,7 @@ contract PRawValidator is SafeMath, SignedSafeMath {
         }
         else revert("PRawValidator/modify-unrecognized-param");
     }
-    function modifyParameters(bytes32 parameter, uint256 val) external update isAuthority {
+    function modifyParameters(bytes32 parameter, uint256 val) external isAuthority {
         if (parameter == "nb") {
           require(val <= EIGHTEEN_DECIMAL_NUMBER, "PRawValidator/invalid-nb");
           noiseBarrier = val;
@@ -193,7 +188,7 @@ contract PRawValidator is SafeMath, SignedSafeMath {
         }
         else revert("PRawValidator/modify-unrecognized-param");
     }
-    function modifyParameters(bytes32 parameter, int256 val) external update isAuthority {
+    function modifyParameters(bytes32 parameter, int256 val) external isAuthority {
         if (parameter == "folb") {
           require(
             val >= -int(multiply(TWENTY_SEVEN_DECIMAL_NUMBER, EIGHTEEN_DECIMAL_NUMBER)) && val < 0,
@@ -216,10 +211,10 @@ contract PRawValidator is SafeMath, SignedSafeMath {
     /**
     * @notice Get the observation list length
     **/
-    function oll_reI() public isReader view update returns (uint256) {
+    function oll() public isReader view returns (uint256) {
         return deviationObservations.length;
     }
-    function getBoundedRedemptionRate_FZ1(int pOutput) public isReader update view returns (uint256, uint256) {
+    function getBoundedRedemptionRate(int pOutput) public isReader view returns (uint256, uint256) {
         int  boundedPOutput = pOutput;
         uint newRedemptionRate;
         uint rateTimeline = SPY;
@@ -247,11 +242,11 @@ contract PRawValidator is SafeMath, SignedSafeMath {
 
         return (newRedemptionRate, rateTimeline);
     }
-    function breaksNoiseBarrier_p7i(uint piSum, uint redemptionPrice) public isReader update view returns (bool) {
+    function breaksNoiseBarrier(uint piSum, uint redemptionPrice) public isReader view returns (bool) {
         uint deltaNoise = subtract(multiply(uint(2), EIGHTEEN_DECIMAL_NUMBER), noiseBarrier);
         return piSum >= subtract(divide(multiply(redemptionPrice, deltaNoise), EIGHTEEN_DECIMAL_NUMBER), redemptionPrice);
     }
-    function correctPreComputedRate_kXS(uint precomputedRate, uint contractComputedRate, uint precomputedAllowedDeviation) public isReader update view returns (bool) {
+    function correctPreComputedRate(uint precomputedRate, uint contractComputedRate, uint precomputedAllowedDeviation) public isReader view returns (bool) {
         if (precomputedRate == contractComputedRate) return true;
         bool withinBounds = (
           precomputedRate >= divide(multiply(contractComputedRate, precomputedAllowedDeviation), EIGHTEEN_DECIMAL_NUMBER) &&
@@ -266,7 +261,7 @@ contract PRawValidator is SafeMath, SignedSafeMath {
         }
         return (withinBounds && sameSign);
     }
-    function getGainAdjustedPOutput_n9z(int proportionalTerm) public isReader update view returns (int256) {
+    function getGainAdjustedPOutput(int proportionalTerm) public isReader view returns (int256) {
         bool pTermExceedsMaxUint = (absolute(proportionalTerm) >= uint(-1) / Kp);
         int adjustedProportional = (pTermExceedsMaxUint) ? proportionalTerm : multiply(proportionalTerm, int(Kp)) / int(EIGHTEEN_DECIMAL_NUMBER);
         return adjustedProportional;
@@ -291,21 +286,21 @@ contract PRawValidator is SafeMath, SignedSafeMath {
         // Update timestamp
         lastUpdateTime = now;
         // Calculate the adjusted P output
-        int pOutput = getGainAdjustedPOutput_n9z(proportionalTerm);
+        int pOutput = getGainAdjustedPOutput(proportionalTerm);
         // Check if P is greater than noise
         if (
-          breaksNoiseBarrier_p7i(absolute(pOutput), redemptionPrice) &&
+          breaksNoiseBarrier(absolute(pOutput), redemptionPrice) &&
           pOutput != 0
         ) {
           // Make sure the annual rate doesn't exceed the bounds
-          (uint newRedemptionRate, ) = getBoundedRedemptionRate_FZ1(pOutput);
+          (uint newRedemptionRate, ) = getBoundedRedemptionRate(pOutput);
           // Sanitize the precomputed allowed deviation
           uint256 sanitizedAllowedDeviation =
             (precomputedAllowedDeviation < upperPrecomputedRateAllowedDeviation) ?
             upperPrecomputedRateAllowedDeviation : precomputedAllowedDeviation;
           // Check that the caller provided a correct precomputed rate
           require(
-            correctPreComputedRate_kXS(inputAccumulatedPreComputedRate, newRedemptionRate, sanitizedAllowedDeviation),
+            correctPreComputedRate(inputAccumulatedPreComputedRate, newRedemptionRate, sanitizedAllowedDeviation),
             "PRawValidator/invalid-seed"
           );
           return 1;
@@ -313,19 +308,19 @@ contract PRawValidator is SafeMath, SignedSafeMath {
           return 0;
         }
     }
-    function getNextRedemptionRate_xlS(uint marketPrice, uint redemptionPrice)
+    function getNextRedemptionRate(uint marketPrice, uint redemptionPrice)
       public isReader view returns (uint256, int256, uint256) {
         // Calculate proportional term
         int256 proportionalTerm = subtract(int(redemptionPrice), multiply(int(marketPrice), int(10**9)));
         // Calculate the P output
-        int pOutput = getGainAdjustedPOutput_n9z(proportionalTerm);
+        int pOutput = getGainAdjustedPOutput(proportionalTerm);
         // Check if P is greater than noise
         if (
-          breaksNoiseBarrier_p7i(absolute(pOutput), redemptionPrice) &&
+          breaksNoiseBarrier(absolute(pOutput), redemptionPrice) &&
           pOutput != 0
         ) {
           // Get the new rate as well as the timeline
-          (uint newRedemptionRate, uint rateTimeline) = getBoundedRedemptionRate_FZ1(pOutput);
+          (uint newRedemptionRate, uint rateTimeline) = getBoundedRedemptionRate(pOutput);
           // Return the bounded result
           return (newRedemptionRate, proportionalTerm, rateTimeline);
         } else {
@@ -336,49 +331,49 @@ contract PRawValidator is SafeMath, SignedSafeMath {
 
     // --- Parameter Getters ---
     function rt(uint marketPrice, uint redemptionPrice, uint IGNORED) external isReader view returns (uint256) {
-        (, , uint rateTimeline) = getNextRedemptionRate_xlS(marketPrice, redemptionPrice);
+        (, , uint rateTimeline) = getNextRedemptionRate(marketPrice, redemptionPrice);
         return rateTimeline;
     }
-    function sg_ME1() external isReader update view returns (uint256) {
+    function sg() external isReader view returns (uint256) {
         return Kp;
     }
-    function nb_9Y5() external isReader update view returns (uint256) {
+    function nb() external isReader view returns (uint256) {
         return noiseBarrier;
     }
-    function drr_f0j() external isReader update view returns (uint256) {
+    function drr() external isReader view returns (uint256) {
         return defaultRedemptionRate;
     }
-    function foub_TvR() external isReader update view returns (uint256) {
+    function foub() external isReader view returns (uint256) {
         return feedbackOutputUpperBound;
     }
-    function folb_tas() external isReader update view returns (int256) {
+    function folb() external isReader view returns (int256) {
         return feedbackOutputLowerBound;
     }
-    function pscl() external isReader update view returns (int256) {
+    function pscl() external isReader view returns (int256) {
         return int(TWENTY_SEVEN_DECIMAL_NUMBER);
     }
-    function ps() external isReader update view returns (uint256) {
+    function ps() external isReader view returns (uint256) {
         return periodSize;
     }
-    function dos_bN5(uint256 i) external isReader update view returns (uint256, int256) {
+    function dos(uint256 i) external isReader view returns (uint256, int256) {
         return (deviationObservations[i].timestamp, deviationObservations[i].proportional);
     }
-    function lprad() external isReader update view returns (uint256) {
+    function lprad() external isReader view returns (uint256) {
         return lowerPrecomputedRateAllowedDeviation;
     }
-    function uprad_45M() external isReader update view returns (uint256) {
+    function uprad() external isReader view returns (uint256) {
         return upperPrecomputedRateAllowedDeviation;
     }
-    function adi() external isReader update view returns (uint256) {
+    function adi() external isReader view returns (uint256) {
         return allowedDeviationIncrease;
     }
-    function mrt_vW0() external isReader update view returns (uint256) {
+    function mrt() external isReader view returns (uint256) {
         return minRateTimeline;
     }
-    function lut_E4m() external isReader update view returns (uint256) {
+    function lut() external isReader view returns (uint256) {
         return lastUpdateTime;
     }
-    function tlv() external isReader update view returns (uint256) {
+    function tlv() external isReader view returns (uint256) {
         uint elapsed = (lastUpdateTime == 0) ? 0 : subtract(now, lastUpdateTime);
         return elapsed;
     }
