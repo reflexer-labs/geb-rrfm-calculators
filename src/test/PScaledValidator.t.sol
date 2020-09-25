@@ -41,8 +41,8 @@ contract PScaledValidatorTest is DSTest {
     uint256 periodSize                           = 3600;
     uint256 minRateTimeline                      = 0;
     uint256 lowerPrecomputedRateAllowedDeviation = 0.99E18;
-    uint256 upperPrecomputedRateAllowedDeviation = 0.99E18;
-    uint256 allowedDeviationIncrease             = TWENTY_SEVEN_DECIMAL_NUMBER;
+    uint256 upperPrecomputedRateAllowedDeviation = 0.90E18;
+    uint256 allowedDeviationIncrease             = 999985751964174351454691118;
     uint256 noiseBarrier                         = EIGHTEEN_DECIMAL_NUMBER;
     uint256 feedbackOutputUpperBound             = TWENTY_SEVEN_DECIMAL_NUMBER * EIGHTEEN_DECIMAL_NUMBER;
     int256  feedbackOutputLowerBound             = -int(TWENTY_SEVEN_DECIMAL_NUMBER * EIGHTEEN_DECIMAL_NUMBER);
@@ -379,5 +379,16 @@ contract PScaledValidatorTest is DSTest {
         assertEq(rateTimeline, defaultGlobalTimeline);
 
         rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% global rate
+    }
+    function test_valid_updated_allowed_deviation() public {
+        validator.modifyParameters("nb", uint(1E18));
+
+        assertEq(rateSetter.adjustedAllowedDeviation(), validator.uprad());
+        rateSetter.updateRate(TWENTY_SEVEN_DECIMAL_NUMBER, address(this));
+
+        hevm.warp(now + validator.ps() * 2);
+        assertEq(rateSetter.adjustedAllowedDeviation(), 940499999999999999);
+        hevm.warp(now + validator.ps() * 8);
+        assertEq(rateSetter.adjustedAllowedDeviation(), 623946915627363281);
     }
 }

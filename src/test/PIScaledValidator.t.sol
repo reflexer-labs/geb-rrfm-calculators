@@ -42,8 +42,8 @@ contract PIScaledValidatorTest is DSTest {
     uint256 minRateTimeline                      = 0;
     uint256 integralPeriodSize                   = 3600;
     uint256 lowerPrecomputedRateAllowedDeviation = 0.99E18;
-    uint256 upperPrecomputedRateAllowedDeviation = 0.99E18;
-    uint256 allowedDeviationIncrease             = TWENTY_SEVEN_DECIMAL_NUMBER;
+    uint256 upperPrecomputedRateAllowedDeviation = 0.90E18;
+    uint256 allowedDeviationIncrease             = 999985751964174351454691118;
     uint256 baseUpdateCallerReward               = 10 ether;
     uint256 maxUpdateCallerReward                = 30 ether;
     uint256 perSecondCallerRewardIncrease        = 1000002763984612345119745925;
@@ -387,5 +387,17 @@ contract PIScaledValidatorTest is DSTest {
         assertEq(rateTimeline, defaultGlobalTimeline);
 
         rateSetter.updateRate(1E27, address(this));
+    }
+    function test_valid_updated_allowed_deviation() public {
+        validator.modifyParameters("nb", uint(1E18));
+        validator.modifyParameters("ag", uint(0));
+
+        assertEq(rateSetter.adjustedAllowedDeviation(), validator.uprad());
+        rateSetter.updateRate(TWENTY_SEVEN_DECIMAL_NUMBER, address(this));
+
+        hevm.warp(now + validator.ips() * 2);
+        assertEq(rateSetter.adjustedAllowedDeviation(), 940499999999999999);
+        hevm.warp(now + validator.ips() * 8);
+        assertEq(rateSetter.adjustedAllowedDeviation(), 623946915627363281);
     }
 }

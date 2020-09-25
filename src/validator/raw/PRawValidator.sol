@@ -288,7 +288,7 @@ contract PRawValidator is SafeMath, SignedSafeMath {
           (uint newRedemptionRate, ) = getBoundedRedemptionRate(pOutput);
           // Sanitize the precomputed allowed deviation
           uint256 sanitizedAllowedDeviation =
-            (precomputedAllowedDeviation < upperPrecomputedRateAllowedDeviation) ?
+            (precomputedAllowedDeviation > upperPrecomputedRateAllowedDeviation) ?
             upperPrecomputedRateAllowedDeviation : precomputedAllowedDeviation;
           // Check that the caller provided a correct precomputed rate
           require(
@@ -367,6 +367,13 @@ contract PRawValidator is SafeMath, SignedSafeMath {
     }
     function dgt() external isReader view returns (uint256) {
         return defaultGlobalTimeline;
+    }
+    function adat() external isReader view returns (uint256) {
+        uint elapsed = subtract(now, lastUpdateTime);
+        if (elapsed <= periodSize) {
+          return 0;
+        }
+        return subtract(elapsed, periodSize);
     }
     function tlv() external isReader view returns (uint256) {
         uint elapsed = (lastUpdateTime == 0) ? 0 : subtract(now, lastUpdateTime);
