@@ -20,20 +20,6 @@ pragma solidity ^0.6.7;
 import "../../math/SafeMath.sol";
 import "../../math/SignedSafeMath.sol";
 
-abstract contract OracleLike {
-    function getResultWithValidity() virtual external returns (uint256, bool);
-    function lastUpdateTime() virtual external view returns (uint64);
-}
-abstract contract OracleRelayerLike {
-    function redemptionPrice() virtual external returns (uint256);
-    function modifyParameters(bytes32,uint256) virtual external;
-}
-abstract contract StabilityFeeTreasuryLike {
-    function getAllowance(address) virtual external view returns (uint, uint);
-    function systemCoin() virtual external view returns (address);
-    function pullFunds(address, address, uint) virtual external;
-}
-
 contract PScaledValidator is SafeMath, SignedSafeMath {
     // --- Authorities ---
     mapping (address => uint) public authorities;
@@ -76,9 +62,9 @@ contract PScaledValidator is SafeMath, SignedSafeMath {
     // --- Fluctuating/Dynamic Variables ---
     // Deviation history
     DeviationObservation[] internal deviationObservations;
-    // Lower allowed deviation of the per second rate when checking that, after it is raised to SPY seconds, it is close to the contract computed annual rate
+    // Lower allowed deviation of the per second rate when checking that, after it is raised to defaultGlobalTimeline seconds, it is close to the contract computed global rate
     uint256 internal lowerPrecomputedRateAllowedDeviation; // [EIGHTEEN_DECIMAL_NUMBER]
-    // Upper allowed deviation of the per second rate when checking that, after it is raised to SPY seconds, it is close to the contract computed annual rate
+    // Upper allowed deviation of the per second rate when checking that, after it is raised to defaultGlobalTimeline seconds, it is close to the contract computed global rate
     uint256 internal upperPrecomputedRateAllowedDeviation; // [EIGHTEEN_DECIMAL_NUMBER]
     // Rate applied to lowerPrecomputedRateAllowedDeviation as time passes by and no new seed is validated
     uint256 internal allowedDeviationIncrease;             // [TWENTY_SEVEN_DECIMAL_NUMBER]
@@ -86,11 +72,12 @@ contract PScaledValidator is SafeMath, SignedSafeMath {
     uint256 internal minRateTimeline;                      // [seconds]
     // Last time when the rate was computed
     uint256 internal lastUpdateTime;                       // [timestamp]
+    // Default timeline for the global rate
+    uint256 internal defaultGlobalTimeline = 31536000;
 
     // Address that can validate seeds
     address public seedProposer;
 
-    uint256 internal constant SPY                         = 31536000;
     uint256 internal constant NEGATIVE_RATE_LIMIT         = TWENTY_SEVEN_DECIMAL_NUMBER - 1;
     uint256 internal constant TWENTY_SEVEN_DECIMAL_NUMBER = 10 ** 27;
     uint256 internal constant EIGHTEEN_DECIMAL_NUMBER     = 10 ** 18;
@@ -139,12 +126,12 @@ contract PScaledValidator is SafeMath, SignedSafeMath {
         }
     }
 
-    // --- Administration ---
-    function setSeedProposer(address addr) external isAuthority {
-        readers[seedProposer] = 0;
-        seedProposer = addr;
-        readers[seedProposer] = 1;
+    // --- Boolean Logic ---
+    function both(bool x, bool y) internal pure returns (bool z) {
+        assembly{ z := and(x, y)}
     }
+
+    // --- Administration ---
     function modifyParameters(bytes32 parameter, address addr) external isAuthority {
         if (parameter == "seedProposer") {
           readers[seedProposer] = 0;
@@ -167,7 +154,7 @@ contract PScaledValidator is SafeMath, SignedSafeMath {
           Kp = val;
         }
         else if (parameter == "mrt") {
-          require(val <= SPY, "PScaledValidator/invalid-mrt");
+          require(both(val > 0, val <= defaultGlobalTimeline), "PScaledValidator/invalid-mrt");
           minRateTimeline = val;
         }
         else if (parameter == "foub") {
@@ -175,16 +162,20 @@ contract PScaledValidator is SafeMath, SignedSafeMath {
           feedbackOutputUpperBound = val;
         }
         else if (parameter == "lprad") {
-          require(val <= EIGHTEEN_DECIMAL_NUMBER && val >= upperPrecomputedRateAllowedDeviation, "PRawValidator/invalid-lprad");
+          require(val <= EIGHTEEN_DECIMAL_NUMBER && val >= upperPrecomputedRateAllowedDeviation, "PScaledValidator/invalid-lprad");
           lowerPrecomputedRateAllowedDeviation = val;
         }
         else if (parameter == "uprad") {
-          require(val <= EIGHTEEN_DECIMAL_NUMBER && val <= lowerPrecomputedRateAllowedDeviation, "PRawValidator/invalid-uprad");
+          require(val <= EIGHTEEN_DECIMAL_NUMBER && val <= lowerPrecomputedRateAllowedDeviation, "PScaledValidator/invalid-uprad");
           upperPrecomputedRateAllowedDeviation = val;
         }
         else if (parameter == "adi") {
-          require(val <= TWENTY_SEVEN_DECIMAL_NUMBER, "PRawValidator/invalid-adi");
+          require(val <= TWENTY_SEVEN_DECIMAL_NUMBER, "PScaledValidator/invalid-adi");
           allowedDeviationIncrease = val;
+        }
+        else if (parameter == "dgt") {
+          require(val > 0, "PScaledValidator/invalid-dgt");
+          defaultGlobalTimeline = val;
         }
         else revert("PScaledValidator/modify-unrecognized-param");
     }
@@ -217,7 +208,7 @@ contract PScaledValidator is SafeMath, SignedSafeMath {
     function getBoundedRedemptionRate(int pOutput) public isReader view returns (uint256, uint256) {
         int  boundedPOutput = pOutput;
         uint newRedemptionRate;
-        uint rateTimeline = SPY;
+        uint rateTimeline = defaultGlobalTimeline;
 
         if (pOutput < feedbackOutputLowerBound) {
           boundedPOutput = feedbackOutputLowerBound;
@@ -267,14 +258,15 @@ contract PScaledValidator is SafeMath, SignedSafeMath {
         return adjustedProportional;
     }
 
-    // --- Rate Calculation ---
+    // --- Rate Validation ---
     function validateSeed(
+      uint seed,
       uint inputAccumulatedPreComputedRate,
       uint marketPrice,
       uint redemptionPrice,
       uint ,
       uint precomputedAllowedDeviation
-    ) external returns (uint8) {
+    ) external returns (uint256) {
         // Only the proposer can call
         require(seedProposer == msg.sender, "PScaledValidator/invalid-msg-sender");
         // Can't update same observation twice
@@ -294,7 +286,7 @@ contract PScaledValidator is SafeMath, SignedSafeMath {
           breaksNoiseBarrier(absolute(pOutput), redemptionPrice) &&
           pOutput != 0
         ) {
-          // Make sure the annual rate doesn't exceed the bounds
+          // Make sure the global rate doesn't exceed the bounds
           (uint newRedemptionRate, ) = getBoundedRedemptionRate(pOutput);
           // Sanitize the precomputed allowed deviation
           uint256 sanitizedAllowedDeviation =
@@ -305,9 +297,9 @@ contract PScaledValidator is SafeMath, SignedSafeMath {
             correctPreComputedRate(inputAccumulatedPreComputedRate, newRedemptionRate, sanitizedAllowedDeviation),
             "PScaledValidator/invalid-seed"
           );
-          return 1;
+          return seed;
         } else {
-          return 0;
+          return TWENTY_SEVEN_DECIMAL_NUMBER;
         }
     }
     function getNextRedemptionRate(uint marketPrice, uint redemptionPrice)
@@ -328,8 +320,8 @@ contract PScaledValidator is SafeMath, SignedSafeMath {
           // Return the bounded result
           return (newRedemptionRate, proportionalTerm, rateTimeline);
         } else {
-          // If it's not, simply return the default annual rate and the computed terms
-          return (TWENTY_SEVEN_DECIMAL_NUMBER, proportionalTerm, SPY);
+          // If it's not, simply return the default global rate and the computed terms
+          return (TWENTY_SEVEN_DECIMAL_NUMBER, proportionalTerm, defaultGlobalTimeline);
         }
     }
 
@@ -376,6 +368,9 @@ contract PScaledValidator is SafeMath, SignedSafeMath {
     }
     function lut() external isReader view returns (uint256) {
         return lastUpdateTime;
+    }
+    function dgt() external isReader view returns (uint256) {
+        return defaultGlobalTimeline;
     }
     function tlv() external isReader view returns (uint256) {
         uint elapsed = (lastUpdateTime == 0) ? 0 : subtract(now, lastUpdateTime);

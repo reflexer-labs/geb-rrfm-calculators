@@ -71,9 +71,9 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
     int256  internal priceDeviationCumulative;             // [TWENTY_SEVEN_DECIMAL_NUMBER]
     // Leak applied to priceDeviationCumulative before adding the latest time adjusted deviation
     uint256 internal perSecondCumulativeLeak;              // [EIGHTEEN_DECIMAL_NUMBER]
-    // Lower allowed deviation of the per second rate when checking that, after it is raised to SPY seconds, it is close to the contract computed annual rate
+    // Lower allowed deviation of the per second rate when checking that, after it is raised to defaultGlobalTimeline seconds, it is close to the contract computed global rate
     uint256 internal lowerPrecomputedRateAllowedDeviation; // [EIGHTEEN_DECIMAL_NUMBER]
-    // Upper allowed deviation of the per second rate when checking that, after it is raised to SPY seconds, it is close to the contract computed annual rate
+    // Upper allowed deviation of the per second rate when checking that, after it is raised to defaultGlobalTimeline seconds, it is close to the contract computed global rate
     uint256 internal upperPrecomputedRateAllowedDeviation; // [EIGHTEEN_DECIMAL_NUMBER]
     // Rate applied to lowerPrecomputedRateAllowedDeviation as time passes by and no new seed is validated
     uint256 internal allowedDeviationIncrease;             // [TWENTY_SEVEN_DECIMAL_NUMBER]
@@ -81,11 +81,12 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
     uint256 internal minRateTimeline;                      // [seconds]
     // Last time when the rate was computed
     uint256 internal lastUpdateTime;                       // [timestamp]
+    // Default timeline for the global rate
+    uint256 internal defaultGlobalTimeline = 31536000;
 
     // Address that can validate seeds
     address public seedProposer;
 
-    uint256 internal constant SPY                         = 31536000;
     uint256 internal constant NEGATIVE_RATE_LIMIT         = TWENTY_SEVEN_DECIMAL_NUMBER - 1;
     uint256 internal constant TWENTY_SEVEN_DECIMAL_NUMBER = 10 ** 27;
     uint256 internal constant EIGHTEEN_DECIMAL_NUMBER     = 10 ** 18;
@@ -105,13 +106,13 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
         int256[] memory importedState
     ) public {
         defaultRedemptionRate           = TWENTY_SEVEN_DECIMAL_NUMBER;
-        require(lowerPrecomputedRateAllowedDeviation_ < EIGHTEEN_DECIMAL_NUMBER, "PIRawValidator/invalid-lprad");
-        require(upperPrecomputedRateAllowedDeviation_ <= lowerPrecomputedRateAllowedDeviation_, "PIRawValidator/invalid-uprad");
-        require(allowedDeviationIncrease_ <= TWENTY_SEVEN_DECIMAL_NUMBER, "PIRawValidator/invalid-adi");
+        require(lowerPrecomputedRateAllowedDeviation_ < EIGHTEEN_DECIMAL_NUMBER, "PIScaledValidator/invalid-lprad");
+        require(upperPrecomputedRateAllowedDeviation_ <= lowerPrecomputedRateAllowedDeviation_, "PIScaledValidator/invalid-uprad");
+        require(allowedDeviationIncrease_ <= TWENTY_SEVEN_DECIMAL_NUMBER, "PIScaledValidator/invalid-adi");
         require(Kp_ > 0, "PIScaledValidator/null-sg");
         require(feedbackOutputUpperBound_ < subtract(subtract(uint(-1), defaultRedemptionRate), 1) && feedbackOutputLowerBound_ < 0, "PIScaledValidator/invalid-foub-or-folb");
         require(integralPeriodSize_ > 0, "PIScaledValidator/invalid-ips");
-        require(minRateTimeline_ <= SPY, "PIScaledValidator/invalid-mrt");
+        require(minRateTimeline_ <= defaultGlobalTimeline, "PIScaledValidator/invalid-mrt");
         require(uint(importedState[0]) <= now, "PIScaledValidator/invalid-imported-time");
         require(noiseBarrier_ <= EIGHTEEN_DECIMAL_NUMBER, "PIScaledValidator/invalid-nb");
         authorities[msg.sender]              = 1;
@@ -135,12 +136,12 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
         }
     }
 
-    // --- Administration ---
-    function setSeedProposer(address addr) external isAuthority {
-        readers[seedProposer] = 0;
-        seedProposer = addr;
-        readers[seedProposer] = 1;
+    // --- Boolean Logic ---
+    function both(bool x, bool y) internal pure returns (bool z) {
+        assembly{ z := and(x, y)}
     }
+
+    // --- Administration ---
     function modifyParameters(bytes32 parameter, address addr) external isAuthority {
         if (parameter == "seedProposer") {
           readers[seedProposer] = 0;
@@ -166,7 +167,7 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
           controllerGains.Ki = val;
         }
         else if (parameter == "mrt") {
-          require(val <= SPY, "PIScaledValidator/invalid-mrt");
+          require(both(val > 0, val <= defaultGlobalTimeline), "PIScaledValidator/invalid-mrt");
           minRateTimeline = val;
         }
         else if (parameter == "foub") {
@@ -178,16 +179,20 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
           perSecondCumulativeLeak = val;
         }
         else if (parameter == "lprad") {
-          require(val <= EIGHTEEN_DECIMAL_NUMBER && val >= upperPrecomputedRateAllowedDeviation, "PIRawValidator/invalid-lprad");
+          require(val <= EIGHTEEN_DECIMAL_NUMBER && val >= upperPrecomputedRateAllowedDeviation, "PIScaledValidator/invalid-lprad");
           lowerPrecomputedRateAllowedDeviation = val;
         }
         else if (parameter == "uprad") {
-          require(val <= EIGHTEEN_DECIMAL_NUMBER && val <= lowerPrecomputedRateAllowedDeviation, "PIRawValidator/invalid-uprad");
+          require(val <= EIGHTEEN_DECIMAL_NUMBER && val <= lowerPrecomputedRateAllowedDeviation, "PIScaledValidator/invalid-uprad");
           upperPrecomputedRateAllowedDeviation = val;
         }
         else if (parameter == "adi") {
-          require(val <= TWENTY_SEVEN_DECIMAL_NUMBER, "PIRawValidator/invalid-adi");
+          require(val <= TWENTY_SEVEN_DECIMAL_NUMBER, "PIScaledValidator/invalid-adi");
           allowedDeviationIncrease = val;
+        }
+        else if (parameter == "dgt") {
+          require(val > 0, "PIScaledValidator/invalid-dgt");
+          defaultGlobalTimeline = val;
         }
         else revert("PIScaledValidator/modify-unrecognized-param");
     }
@@ -229,7 +234,7 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
     function getBoundedRedemptionRate(int piOutput) public isReader view returns (uint256, uint256) {
         int  boundedPIOutput = piOutput;
         uint newRedemptionRate;
-        uint rateTimeline = SPY;
+        uint rateTimeline = defaultGlobalTimeline;
 
         if (piOutput < feedbackOutputLowerBound) {
           boundedPIOutput = feedbackOutputLowerBound;
@@ -298,14 +303,15 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
         return (adjustedProportional, adjustedIntegral);
     }
 
-    // --- Rate Calculation ---
+    // --- Rate Validation ---
     function validateSeed(
+      uint seed,
       uint inputAccumulatedPreComputedRate,
       uint marketPrice,
       uint redemptionPrice,
       uint accumulatedLeak,
       uint precomputedAllowedDeviation
-    ) external returns (uint8) {
+    ) external returns (uint256) {
         // Only the proposer can call
         require(seedProposer == msg.sender, "PIScaledValidator/invalid-msg-sender");
         // Can't update same observation twice
@@ -325,7 +331,7 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
           breaksNoiseBarrier(absolute(piOutput), redemptionPrice) &&
           piOutput != 0
         ) {
-          // Make sure the annual rate doesn't exceed the bounds
+          // Make sure the global rate doesn't exceed the bounds
           (uint newRedemptionRate, ) = getBoundedRedemptionRate(piOutput);
           // Sanitize the precomputed allowed deviation
           uint256 sanitizedAllowedDeviation =
@@ -336,9 +342,9 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
             correctPreComputedRate(inputAccumulatedPreComputedRate, newRedemptionRate, sanitizedAllowedDeviation),
             "PIScaledValidator/invalid-seed"
           );
-          return 1;
+          return seed;
         } else {
-          return 0;
+          return TWENTY_SEVEN_DECIMAL_NUMBER;
         }
     }
     // Update accumulator and deviation history
@@ -368,8 +374,8 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
           // Return the bounded result
           return (newRedemptionRate, proportionalTerm, cumulativeDeviation, rateTimeline);
         } else {
-          // If it's not, simply return the default annual rate and the computed terms
-          return (TWENTY_SEVEN_DECIMAL_NUMBER, proportionalTerm, cumulativeDeviation, SPY);
+          // If it's not, simply return the default global rate and the computed terms
+          return (TWENTY_SEVEN_DECIMAL_NUMBER, proportionalTerm, cumulativeDeviation, defaultGlobalTimeline);
         }
     }
 
@@ -422,6 +428,9 @@ contract PIScaledValidator is SafeMath, SignedSafeMath {
     }
     function lut() external isReader view returns (uint256) {
         return lastUpdateTime;
+    }
+    function dgt() external isReader view returns (uint256) {
+        return defaultGlobalTimeline;
     }
     function tlv() external isReader view returns (uint256) {
         uint elapsed = (lastUpdateTime == 0) ? 0 : subtract(now, lastUpdateTime);

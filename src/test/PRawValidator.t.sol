@@ -77,7 +77,7 @@ contract PRawValidatorTest is DSTest {
     }
 
     // --- Math ---
-    uint constant SPY = 31536000;
+    uint constant defaultGlobalTimeline = 31536000;
     uint constant TWENTY_SEVEN_DECIMAL_NUMBER = 10 ** 27;
     uint constant EIGHTEEN_DECIMAL_NUMBER = 10 ** 18;
 
@@ -132,7 +132,7 @@ contract PRawValidatorTest is DSTest {
         );
         assertEq(newRate, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(pTerm, 0);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
 
         // Verify that it did not change state
         assertEq(validator.readers(address(this)), 1);
@@ -163,7 +163,7 @@ contract PRawValidatorTest is DSTest {
         );
 
         assertEq(rateSetter.iapcr(), TWENTY_SEVEN_DECIMAL_NUMBER);
-        assertEq(validator.rt(1 ether, TWENTY_SEVEN_DECIMAL_NUMBER, rateSetter.iapcr()), SPY);
+        assertEq(validator.rt(1 ether, TWENTY_SEVEN_DECIMAL_NUMBER, rateSetter.iapcr()), defaultGlobalTimeline);
         assertEq(rateSetter.getRTAdjustedSeed(TWENTY_SEVEN_DECIMAL_NUMBER, 1 ether, TWENTY_SEVEN_DECIMAL_NUMBER), TWENTY_SEVEN_DECIMAL_NUMBER);
         assertTrue(validator.correctPreComputedRate(TWENTY_SEVEN_DECIMAL_NUMBER, newRate, lowerPrecomputedRateAllowedDeviation));
 
@@ -197,12 +197,12 @@ contract PRawValidatorTest is DSTest {
         (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate(1.05E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 1E27);
         assertEq(pTerm, -0.05E27);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
 
         (newRate, pTerm, rateTimeline) = validator.getNextRedemptionRate(0.995E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 1E27);
         assertEq(pTerm, 0.005E27);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
     }
     function test_get_annual_rate_with_warp_with_deviation() public {
         validator.modifyParameters("nb", uint(0.94E18));
@@ -212,12 +212,12 @@ contract PRawValidatorTest is DSTest {
         (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate(1.05E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 1E27);
         assertEq(pTerm, -0.05E27);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
 
         (newRate, pTerm, rateTimeline) = validator.getNextRedemptionRate(0.995E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 1E27);
         assertEq(pTerm, 0.005E27);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
     }
     function test_proportional_warp_positive_and_negative_deviation() public {
         validator.modifyParameters("nb", uint(0.995E18));
@@ -228,7 +228,7 @@ contract PRawValidatorTest is DSTest {
         (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate(1.05E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 0.95E27);
         assertEq(pTerm, -0.05E27);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
 
         rateSetter.updateRate(999999998373500306131523668, address(this));
         assertEq(oracleRelayer.redemptionPrice(), TWENTY_SEVEN_DECIMAL_NUMBER);
@@ -242,7 +242,7 @@ contract PRawValidatorTest is DSTest {
         (newRate, pTerm, rateTimeline) = validator.getNextRedemptionRate(0.95E18, oracleRelayer.redemptionPrice());
         assertEq(newRate, 1049988289270765748110637924);
         assertEq(pTerm, 49988289270765748110637924);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
 
         rateSetter.updateRate(1000000001546772294187589218, address(this));
         assertEq(oracleRelayer.redemptionRate(), 1000000001546772294187589218);
@@ -256,9 +256,9 @@ contract PRawValidatorTest is DSTest {
         (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate(1.99E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 1E25);
         assertEq(pTerm, -99E25);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
 
-        rateSetter.updateRate(999999853971022014715394140, address(this)); // -99% annual rate
+        rateSetter.updateRate(999999853971022014715394140, address(this)); // -99% global rate
     }
     function test_proportional_warp_positive_ninety_nine_annual_rate() public {
         validator.modifyParameters("nb", uint(0.995E18));
@@ -269,9 +269,9 @@ contract PRawValidatorTest is DSTest {
         (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate(0.01E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 1.99E27);
         assertEq(pTerm, 99E25);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
 
-        rateSetter.updateRate(1000000021820606489223699321, address(this)); // 99% annual rate
+        rateSetter.updateRate(1000000021820606489223699321, address(this)); // 99% global rate
     }
     function test_proportional_warp_positive_above_positive_hundred_percent() public {
         validator.modifyParameters("nb", uint(0.995E18));
@@ -283,9 +283,9 @@ contract PRawValidatorTest is DSTest {
         (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate(0.5E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 6E27);
         assertEq(pTerm, 50E25);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
 
-        rateSetter.updateRate(1000000056816321668209211588, address(this)); // 500% annual rate
+        rateSetter.updateRate(1000000056816321668209211588, address(this)); // 500% global rate
     }
     function test_proportional_warp_positive_below_negative_hundred_percent_ray_divisible() public {
         validator.modifyParameters("nb", uint(0.995E18));
@@ -344,16 +344,16 @@ contract PRawValidatorTest is DSTest {
         (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate(2E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 1);
         assertEq(pTerm, -1E27);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
 
         rateSetter.updateRate(999998028610596449166604443, address(this)); // approx -99.99999999999999999999 over 365 days
 
-        hevm.warp(now + SPY / 2);
+        hevm.warp(now + defaultGlobalTimeline / 2);
 
         assertEq(oracleRelayer.redemptionRate(), 999998028610596449166604443);
         assertEq(oracleRelayer.redemptionPrice(), 31622776601684);
 
-        hevm.warp(now + SPY / 2);
+        hevm.warp(now + defaultGlobalTimeline / 2);
 
         assertEq(oracleRelayer.redemptionRate(), 999998028610596449166604443);
         assertEq(oracleRelayer.redemptionPrice(), 1);
@@ -367,17 +367,17 @@ contract PRawValidatorTest is DSTest {
         (uint newRate, int pTerm, uint rateTimeline) = validator.getNextRedemptionRate(1.05E18, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(newRate, 0.95E27);
         assertEq(pTerm, -0.05E27);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
 
-        rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% annual rate
+        rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% global rate
 
         hevm.warp(now + validator.ps() * 2);
 
         (newRate, pTerm, rateTimeline) = validator.getNextRedemptionRate(1.05E18, oracleRelayer.redemptionPrice());
         assertEq(newRate, 949988289270765748110637924);
         assertEq(pTerm, -50011710729234251889362076);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
 
-        rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% annual rate
+        rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% global rate
     }
 }

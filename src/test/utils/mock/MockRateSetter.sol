@@ -11,7 +11,7 @@ abstract contract OracleRelayerLike {
     function modifyParameters(bytes32,uint256) virtual external;
 }
 abstract contract PIDValidator {
-    function validateSeed(uint256, uint256, uint256, uint256, uint256) virtual external returns (uint8);
+    function validateSeed(uint256, uint256, uint256, uint256, uint256, uint256) virtual external returns (uint256);
     function rt(uint256, uint256, uint256) virtual external view returns (uint256);
     function pscl() virtual external view returns (uint256);
     function tlv() virtual external view returns (uint256);
@@ -51,19 +51,18 @@ contract MockRateSetter is RateSetterMath {
         // Get the latest redemption price
         uint redemptionPrice = oracleRelayer.redemptionPrice();
         // Validate the seed
-        uint256 tlv      = pidValidator.tlv();
-        uint256 iapcr    = rpower(pidValidator.pscl(), tlv, RAY);
-        uint8 validation = pidValidator.validateSeed(
+        uint256 tlv       = pidValidator.tlv();
+        uint256 iapcr     = rpower(pidValidator.pscl(), tlv, RAY);
+        uint256 validated = pidValidator.validateSeed(
+            seed,
             rpower(seed, pidValidator.rt(marketPrice, redemptionPrice, iapcr), RAY),
             marketPrice,
             redemptionPrice,
             iapcr,
             rmultiply(pidValidator.lprad(), rpower(pidValidator.adi(), tlv, RAY))
         );
-        // Pick new rate
-        uint256 newRate = (validation == 0) ? RAY : seed;
         // Update the rate inside the system (if it doesn't throw)
-        try oracleRelayer.modifyParameters("redemptionRate", newRate) {}
+        try oracleRelayer.modifyParameters("redemptionRate", validated) {}
         catch(bytes memory revertReason) {}
     }
 

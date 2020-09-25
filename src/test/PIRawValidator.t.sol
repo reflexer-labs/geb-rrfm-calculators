@@ -85,7 +85,7 @@ contract PIRawValidatorTest is DSTest {
     }
 
     // --- Math ---
-    uint constant SPY = 31536000;
+    uint constant defaultGlobalTimeline = 31536000;
     uint constant TWENTY_SEVEN_DECIMAL_NUMBER = 10 ** 27;
     uint constant EIGHTEEN_DECIMAL_NUMBER = 10 ** 18;
 
@@ -174,7 +174,7 @@ contract PIRawValidatorTest is DSTest {
         assertEq(newRedemptionRate, TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(pTerm, 0);
         assertEq(iTerm, 0);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
 
         // Verify that it did not change state
         assertEq(validator.readers(address(this)), 1);
@@ -240,7 +240,7 @@ contract PIRawValidatorTest is DSTest {
         assertEq(newRedemptionRate, 1E27);
         assertEq(pTerm, -0.05E27);
         assertEq(iTerm, 0);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
 
         orcl.updateTokenPrice(0.995E18); // -0.5% deviation
 
@@ -249,7 +249,7 @@ contract PIRawValidatorTest is DSTest {
         assertEq(newRedemptionRate, 1E27);
         assertEq(pTerm, 0.005E27);
         assertEq(iTerm, 0);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
     }
     function test_first_small_positive_deviation() public {
         assertEq(uint(validator.pdc()), 0);
@@ -264,9 +264,9 @@ contract PIRawValidatorTest is DSTest {
         assertEq(newRedemptionRate, 0.95E27);
         assertEq(pTerm, -0.05E27);
         assertEq(iTerm, 0);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
 
-        rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% annual rate
+        rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% global rate
 
         assertEq(uint(validator.lut()), now);
         assertEq(validator.pdc(), 0);
@@ -294,9 +294,9 @@ contract PIRawValidatorTest is DSTest {
         assertEq(newRedemptionRate, 1.05E27);
         assertEq(pTerm, 0.05E27);
         assertEq(iTerm, 0);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
 
-        rateSetter.updateRate(1000000001547125957863212448, address(this)); // 5% annual rate
+        rateSetter.updateRate(1000000001547125957863212448, address(this)); // 5% global rate
     }
     function test_two_small_positive_deviations() public {
         assertEq(uint(validator.pdc()), 0);
@@ -305,7 +305,7 @@ contract PIRawValidatorTest is DSTest {
         hevm.warp(now + validator.ips());
 
         orcl.updateTokenPrice(1.05E18);
-        rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% annual rate
+        rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% global rate
 
         hevm.warp(now + validator.ips());
 
@@ -325,7 +325,7 @@ contract PIRawValidatorTest is DSTest {
         hevm.warp(now + validator.ips());
 
         orcl.updateTokenPrice(1.05E18);
-        rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% annual rate
+        rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% global rate
 
         hevm.warp(now + validator.ips() * 10); // 10 hours
 
@@ -345,7 +345,7 @@ contract PIRawValidatorTest is DSTest {
         hevm.warp(now + validator.ips());
 
         orcl.updateTokenPrice(1.05E18);
-        rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% annual rate
+        rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% global rate
 
         hevm.warp(now + validator.ips() * 10); // 10 hours
 
@@ -372,9 +372,9 @@ contract PIRawValidatorTest is DSTest {
         assertEq(newRedemptionRate, 95E25);  // -5%
         assertEq(pTerm, -5E25);
         assertEq(iTerm, 0);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
 
-        rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% annual rate
+        rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% global rate
 
         hevm.warp(now + validator.ips() * 10); // 10 hours
 
@@ -383,7 +383,7 @@ contract PIRawValidatorTest is DSTest {
         assertEq(newRedemptionRate, 949941447725224472394681805);
         assertEq(pTerm, -50058552274775527605318195);
         assertEq(iTerm, -1801053940945959496895727492000);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
     }
     function test_update_after_one_year() public {
         validator.modifyParameters("nb", uint(1E18));
@@ -399,11 +399,11 @@ contract PIRawValidatorTest is DSTest {
         assertEq(newRedemptionRate, 58E25);  // -42%
         assertEq(pTerm, -42E25);
         assertEq(iTerm, 0);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
 
-        rateSetter.updateRate(999999982726814728022409124, address(this)); // -42% annual rate
+        rateSetter.updateRate(999999982726814728022409124, address(this)); // -42% global rate
 
-        hevm.warp(now + SPY); // 1 year
+        hevm.warp(now + defaultGlobalTimeline); // 1 year
         orcl.updateTokenPrice(2.435E18);
 
         (newRedemptionRate, pTerm, iTerm, rateTimeline) =
@@ -411,6 +411,6 @@ contract PIRawValidatorTest is DSTest {
         assertEq(newRedemptionRate, 1000999999999999999959929186);
         assertEq(pTerm, 999999999999999959929186);
         assertEq(iTerm, -6606792000000000000631836595152000);
-        assertEq(rateTimeline, SPY);
+        assertEq(rateTimeline, defaultGlobalTimeline);
     }
 }
