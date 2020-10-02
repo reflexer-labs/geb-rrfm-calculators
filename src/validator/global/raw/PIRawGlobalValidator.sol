@@ -432,7 +432,7 @@ contract PIRawGlobalValidator is SafeMath, SignedSafeMath {
     }
     function adat() external isReader view returns (uint256) {
         uint elapsed = subtract(now, lastUpdateTime);
-        if (elapsed <= integralPeriodSize) {
+        if (elapsed < integralPeriodSize) {
           return 0;
         }
         return subtract(elapsed, integralPeriodSize);
