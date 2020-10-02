@@ -2,9 +2,9 @@ pragma solidity ^0.6.7;
 
 import "ds-test/test.sol";
 
-import {PScaledValidator} from '../validator/scaled/PScaledValidator.sol';
-import {MockRateSetter} from "./utils/mock/MockRateSetter.sol";
-import "./utils/mock/MockOracleRelayer.sol";
+import {PRawGlobalValidator} from '../../validator/global/raw/PRawGlobalValidator.sol';
+import {MockRateSetter} from "../utils/mock/MockRateSetter.sol";
+import "../utils/mock/MockOracleRelayer.sol";
 
 contract Feed {
     bytes32 public price;
@@ -28,13 +28,13 @@ abstract contract Hevm {
     function warp(uint256) virtual public;
 }
 
-contract PScaledValidatorTest is DSTest {
+contract PRawGlobalValidatorTest is DSTest {
     Hevm hevm;
 
     MockOracleRelayer oracleRelayer;
     MockRateSetter rateSetter;
 
-    PScaledValidator validator;
+    PRawGlobalValidator validator;
     Feed orcl;
 
     uint256 Kp                                   = EIGHTEEN_DECIMAL_NUMBER;
@@ -57,7 +57,7 @@ contract PScaledValidatorTest is DSTest {
         orcl = new Feed(1 ether, true);
         oracleRelayer = new MockOracleRelayer();
 
-        validator = new PScaledValidator(
+        validator = new PRawGlobalValidator(
           Kp,
           periodSize,
           lowerPrecomputedRateAllowedDeviation,
@@ -240,8 +240,8 @@ contract PScaledValidatorTest is DSTest {
         orcl.updateTokenPrice(0.95E18);
 
         (newRate, pTerm, rateTimeline) = validator.getNextRedemptionRate(0.95E18, oracleRelayer.redemptionPrice());
-        assertEq(newRate, 1049988874676941814727119119);
-        assertEq(pTerm, 49988874676941814727119119);
+        assertEq(newRate, 1049988289270765748110637924);
+        assertEq(pTerm, 49988289270765748110637924);
         assertEq(rateTimeline, defaultGlobalTimeline);
 
         rateSetter.updateRate(1000000001546772294187589218, address(this));
@@ -374,8 +374,8 @@ contract PScaledValidatorTest is DSTest {
         hevm.warp(now + validator.ps() * 2);
 
         (newRate, pTerm, rateTimeline) = validator.getNextRedemptionRate(1.05E18, oracleRelayer.redemptionPrice());
-        assertEq(newRate, 949987703590304111014184290);
-        assertEq(pTerm, -50012296409695888985815710);
+        assertEq(newRate, 949988289270765748110637924);
+        assertEq(pTerm, -50011710729234251889362076);
         assertEq(rateTimeline, defaultGlobalTimeline);
 
         rateSetter.updateRate(999999998373500306131523668, address(this)); // -5% global rate

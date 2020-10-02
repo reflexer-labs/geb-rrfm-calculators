@@ -2,9 +2,9 @@ pragma solidity ^0.6.7;
 
 import "ds-test/test.sol";
 
-import {PIRawValidator} from '../validator/raw/PIRawValidator.sol';
-import {MockRateSetter} from "./utils/mock/MockRateSetter.sol";
-import "./utils/mock/MockOracleRelayer.sol";
+import {PIRawGlobalValidator} from '../../validator/global/raw/PIRawGlobalValidator.sol';
+import {MockRateSetter} from "../utils/mock/MockRateSetter.sol";
+import "../utils/mock/MockOracleRelayer.sol";
 
 contract Feed {
     bytes32 public price;
@@ -28,13 +28,13 @@ abstract contract Hevm {
     function warp(uint256) virtual public;
 }
 
-contract PIRawValidatorTest is DSTest {
+contract PIRawGlobalValidatorTest is DSTest {
     Hevm hevm;
 
     MockOracleRelayer oracleRelayer;
     MockRateSetter rateSetter;
 
-    PIRawValidator validator;
+    PIRawGlobalValidator validator;
     Feed orcl;
 
     uint256 Kp                                   = EIGHTEEN_DECIMAL_NUMBER;
@@ -63,7 +63,7 @@ contract PIRawValidatorTest is DSTest {
       oracleRelayer = new MockOracleRelayer();
       orcl = new Feed(1 ether, true);
 
-      validator = new PIRawValidator(
+      validator = new PIRawGlobalValidator(
         Kp,
         Ki,
         perSecondCumulativeLeak,

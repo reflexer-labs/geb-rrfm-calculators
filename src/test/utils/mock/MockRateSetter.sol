@@ -50,6 +50,8 @@ contract MockRateSetter is RateSetterMath {
         (uint256 marketPrice, bool hasValidValue) = orcl.getResultWithValidity();
         // If the oracle has a value
         require(hasValidValue, "MockRateSetter/invalid-oracle-value");
+        // If the price is non-zero
+        require(marketPrice > 0, "MockRateSetter/null-market-price");
         // Get the latest redemption price
         uint redemptionPrice = oracleRelayer.redemptionPrice();
         // Validate the seed

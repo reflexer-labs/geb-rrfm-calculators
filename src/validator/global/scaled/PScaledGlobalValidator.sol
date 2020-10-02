@@ -1,4 +1,4 @@
-/// PRawValidator.sol
+/// PScaledGlobalValidator.sol
 
 // Copyright (C) 2020 Reflexer Labs, INC
 
@@ -17,16 +17,16 @@
 
 pragma solidity ^0.6.7;
 
-import "../../math/SafeMath.sol";
-import "../../math/SignedSafeMath.sol";
+import "../../../math/SafeMath.sol";
+import "../../../math/SignedSafeMath.sol";
 
-contract PRawValidator is SafeMath, SignedSafeMath {
+contract PScaledGlobalValidator is SafeMath, SignedSafeMath {
     // --- Authorities ---
     mapping (address => uint) public authorities;
     function addAuthority(address account) external isAuthority { authorities[account] = 1; }
     function removeAuthority(address account) external isAuthority { authorities[account] = 0; }
     modifier isAuthority {
-        require(authorities[msg.sender] == 1, "PRawValidator/not-an-authority");
+        require(authorities[msg.sender] == 1, "PScaledGlobalValidator/not-an-authority");
         _;
     }
 
@@ -35,7 +35,7 @@ contract PRawValidator is SafeMath, SignedSafeMath {
     function addReader(address account) external isAuthority { readers[account] = 1; }
     function removeReader(address account) external isAuthority { readers[account] = 0; }
     modifier isReader {
-        require(readers[msg.sender] == 1, "PRawValidator/not-a-reader");
+        require(readers[msg.sender] == 1, "PScaledGlobalValidator/not-a-reader");
         _;
     }
 
@@ -95,18 +95,18 @@ contract PRawValidator is SafeMath, SignedSafeMath {
         int256[] memory importedState
     ) public {
         defaultRedemptionRate                = TWENTY_SEVEN_DECIMAL_NUMBER;
-        require(lowerPrecomputedRateAllowedDeviation_ < EIGHTEEN_DECIMAL_NUMBER, "PRawValidator/invalid-lprad");
-        require(upperPrecomputedRateAllowedDeviation_ <= lowerPrecomputedRateAllowedDeviation_, "PRawValidator/invalid-uprad");
-        require(allowedDeviationIncrease_ <= TWENTY_SEVEN_DECIMAL_NUMBER, "PRawValidator/invalid-adi");
-        require(Kp_ > 0, "PRawValidator/null-sg");
+        require(lowerPrecomputedRateAllowedDeviation_ < EIGHTEEN_DECIMAL_NUMBER, "PScaledGlobalValidator/invalid-lprad");
+        require(upperPrecomputedRateAllowedDeviation_ <= lowerPrecomputedRateAllowedDeviation_, "PScaledGlobalValidator/invalid-uprad");
+        require(allowedDeviationIncrease_ <= TWENTY_SEVEN_DECIMAL_NUMBER, "PScaledGlobalValidator/invalid-adi");
+        require(Kp_ > 0, "PScaledGlobalValidator/null-sg");
         require(
           feedbackOutputUpperBound_ <= multiply(TWENTY_SEVEN_DECIMAL_NUMBER, EIGHTEEN_DECIMAL_NUMBER) &&
           feedbackOutputLowerBound_ >= -int(multiply(TWENTY_SEVEN_DECIMAL_NUMBER, EIGHTEEN_DECIMAL_NUMBER)) && feedbackOutputLowerBound_ < 0,
-          "PRawValidator/invalid-foub-or-folb"
+          "PScaledGlobalValidator/invalid-foub-or-folb"
         );
-        require(periodSize_ > 0, "PRawValidator/invalid-ps");
-        require(uint(importedState[0]) <= now, "PRawValidator/invalid-imported-time");
-        require(noiseBarrier_ <= EIGHTEEN_DECIMAL_NUMBER, "PRawValidator/invalid-nb");
+        require(periodSize_ > 0, "PScaledGlobalValidator/invalid-ps");
+        require(uint(importedState[0]) <= now, "PScaledGlobalValidator/invalid-imported-time");
+        require(noiseBarrier_ <= EIGHTEEN_DECIMAL_NUMBER, "PScaledGlobalValidator/invalid-nb");
         authorities[msg.sender]              = 1;
         readers[msg.sender]                  = 1;
         feedbackOutputUpperBound             = feedbackOutputUpperBound_;
@@ -138,56 +138,56 @@ contract PRawValidator is SafeMath, SignedSafeMath {
           seedProposer = addr;
           readers[seedProposer] = 1;
         }
-        else revert("PRawValidator/modify-unrecognized-param");
+        else revert("PScaledGlobalValidator/modify-unrecognized-param");
     }
     function modifyParameters(bytes32 parameter, uint256 val) external isAuthority {
         if (parameter == "nb") {
-          require(val <= EIGHTEEN_DECIMAL_NUMBER, "PRawValidator/invalid-nb");
+          require(val <= EIGHTEEN_DECIMAL_NUMBER, "PScaledGlobalValidator/invalid-nb");
           noiseBarrier = val;
         }
         else if (parameter == "ps") {
-          require(val > 0, "PRawValidator/null-ps");
+          require(val > 0, "PScaledGlobalValidator/null-ps");
           periodSize = val;
         }
         else if (parameter == "sg") {
-          require(val > 0, "PRawValidator/null-sg");
+          require(val > 0, "PScaledGlobalValidator/null-sg");
           Kp = val;
         }
         else if (parameter == "mrt") {
-          require(both(val > 0, val <= defaultGlobalTimeline), "PRawValidator/invalid-mrt");
+          require(both(val > 0, val <= defaultGlobalTimeline), "PScaledGlobalValidator/invalid-mrt");
           minRateTimeline = val;
         }
         else if (parameter == "foub") {
-          require(val <= multiply(TWENTY_SEVEN_DECIMAL_NUMBER, EIGHTEEN_DECIMAL_NUMBER), "PRawValidator/big-foub");
+          require(val <= multiply(TWENTY_SEVEN_DECIMAL_NUMBER, EIGHTEEN_DECIMAL_NUMBER), "PScaledGlobalValidator/big-foub");
           feedbackOutputUpperBound = val;
         }
         else if (parameter == "lprad") {
-          require(val <= EIGHTEEN_DECIMAL_NUMBER && val >= upperPrecomputedRateAllowedDeviation, "PRawValidator/invalid-lprad");
+          require(val <= EIGHTEEN_DECIMAL_NUMBER && val >= upperPrecomputedRateAllowedDeviation, "PScaledGlobalValidator/invalid-lprad");
           lowerPrecomputedRateAllowedDeviation = val;
         }
         else if (parameter == "uprad") {
-          require(val <= EIGHTEEN_DECIMAL_NUMBER && val <= lowerPrecomputedRateAllowedDeviation, "PRawValidator/invalid-uprad");
+          require(val <= EIGHTEEN_DECIMAL_NUMBER && val <= lowerPrecomputedRateAllowedDeviation, "PScaledGlobalValidator/invalid-uprad");
           upperPrecomputedRateAllowedDeviation = val;
         }
         else if (parameter == "adi") {
-          require(val <= TWENTY_SEVEN_DECIMAL_NUMBER, "PRawValidator/invalid-adi");
+          require(val <= TWENTY_SEVEN_DECIMAL_NUMBER, "PScaledGlobalValidator/invalid-adi");
           allowedDeviationIncrease = val;
         }
         else if (parameter == "dgt") {
-          require(val > 0, "PRawValidator/invalid-dgt");
+          require(val > 0, "PScaledGlobalValidator/invalid-dgt");
           defaultGlobalTimeline = val;
         }
-        else revert("PRawValidator/modify-unrecognized-param");
+        else revert("PScaledGlobalValidator/modify-unrecognized-param");
     }
     function modifyParameters(bytes32 parameter, int256 val) external isAuthority {
         if (parameter == "folb") {
           require(
             val >= -int(multiply(TWENTY_SEVEN_DECIMAL_NUMBER, EIGHTEEN_DECIMAL_NUMBER)) && val < 0,
-            "PRawValidator/invalid-folb"
+            "PScaledGlobalValidator/invalid-folb"
           );
           feedbackOutputLowerBound = val;
         }
-        else revert("PRawValidator/modify-unrecognized-param");
+        else revert("PScaledGlobalValidator/modify-unrecognized-param");
     }
 
     // --- P Specific Math ---
@@ -268,11 +268,13 @@ contract PRawValidator is SafeMath, SignedSafeMath {
       uint precomputedAllowedDeviation
     ) external returns (uint256) {
         // Only the proposer can call
-        require(seedProposer == msg.sender, "PRawValidator/invalid-msg-sender");
+        require(seedProposer == msg.sender, "PScaledGlobalValidator/invalid-msg-sender");
         // Can't update same observation twice
-        require(subtract(now, lastUpdateTime) >= periodSize || lastUpdateTime == 0, "PRawValidator/wait-more");
+        require(subtract(now, lastUpdateTime) >= periodSize || lastUpdateTime == 0, "PScaledGlobalValidator/wait-more");
+        // Get the scaled market price
+        uint256 scaledMarketPrice = multiply(marketPrice, 10**9);
         // Calculate proportional term
-        int256 proportionalTerm = subtract(int(redemptionPrice), multiply(int(marketPrice), int(10**9)));
+        int256 proportionalTerm = multiply(subtract(int(redemptionPrice), int(scaledMarketPrice)), int(TWENTY_SEVEN_DECIMAL_NUMBER)) / int(redemptionPrice);
         // Update deviation history
         deviationObservations.push(DeviationObservation(now, proportionalTerm));
         // Update timestamp
@@ -293,7 +295,7 @@ contract PRawValidator is SafeMath, SignedSafeMath {
           // Check that the caller provided a correct precomputed rate
           require(
             correctPreComputedRate(inputAccumulatedPreComputedRate, newRedemptionRate, sanitizedAllowedDeviation),
-            "PRawValidator/invalid-seed"
+            "PScaledGlobalValidator/invalid-seed"
           );
           return seed;
         } else {
@@ -302,8 +304,10 @@ contract PRawValidator is SafeMath, SignedSafeMath {
     }
     function getNextRedemptionRate(uint marketPrice, uint redemptionPrice)
       public isReader view returns (uint256, int256, uint256) {
+        // Get the scaled market price
+        uint256 scaledMarketPrice = multiply(marketPrice, 10**9);
         // Calculate proportional term
-        int256 proportionalTerm = subtract(int(redemptionPrice), multiply(int(marketPrice), int(10**9)));
+        int256 proportionalTerm = multiply(subtract(int(redemptionPrice), int(scaledMarketPrice)), int(TWENTY_SEVEN_DECIMAL_NUMBER)) / int(redemptionPrice);
         // Calculate the P output
         int pOutput = getGainAdjustedPOutput(proportionalTerm);
         // Check if P is greater than noise
