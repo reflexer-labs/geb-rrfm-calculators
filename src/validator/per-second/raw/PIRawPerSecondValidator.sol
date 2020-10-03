@@ -70,7 +70,7 @@ contract PIRawPerSecondValidator is SafeMath, SignedSafeMath {
     // Accumulator for price deviations
     int256  internal priceDeviationCumulative;             // [TWENTY_SEVEN_DECIMAL_NUMBER]
     // Leak applied to priceDeviationCumulative before adding the latest time adjusted deviation
-    uint256 internal perSecondCumulativeLeak;              // [EIGHTEEN_DECIMAL_NUMBER]
+    uint256 internal perSecondCumulativeLeak;              // [TWENTY_SEVEN_DECIMAL_NUMBER]
     // Last time when the rate was computed
     uint256 internal lastUpdateTime;                       // [timestamp]
     // Default timeline for the global rate
