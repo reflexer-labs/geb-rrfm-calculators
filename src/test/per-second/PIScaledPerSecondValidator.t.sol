@@ -2,7 +2,7 @@ pragma solidity ^0.6.7;
 
 import "ds-test/test.sol";
 
-import {PIRawPerSecondValidator} from '../../validator/per-second/raw/PIRawPerSecondValidator.sol';
+import {PIScaledPerSecondValidator} from '../../validator/per-second/scaled/PIScaledPerSecondValidator.sol';
 import {MockRateSetter} from "../utils/mock/MockRateSetter.sol";
 import "../utils/mock/MockOracleRelayer.sol";
 
@@ -28,13 +28,13 @@ abstract contract Hevm {
     function warp(uint256) virtual public;
 }
 
-contract PIRawPerSecondValidatorTest is DSTest {
+contract PIScaledPerSecondValidatorTest is DSTest {
     Hevm hevm;
 
     MockOracleRelayer oracleRelayer;
     MockRateSetter rateSetter;
 
-    PIRawPerSecondValidator validator;
+    PIScaledPerSecondValidator validator;
     Feed orcl;
 
     uint256 Kp                                = EIGHTEEN_DECIMAL_NUMBER;
@@ -59,7 +59,7 @@ contract PIRawPerSecondValidatorTest is DSTest {
       oracleRelayer = new MockOracleRelayer();
       orcl = new Feed(1 ether, true);
 
-      validator = new PIRawPerSecondValidator(
+      validator = new PIScaledPerSecondValidator(
         Kp,
         Ki,
         perSecondCumulativeLeak,
@@ -77,10 +77,11 @@ contract PIRawPerSecondValidatorTest is DSTest {
     }
 
     // --- Math ---
-    uint constant defaultGlobalTimeline = 1;
+    uint constant defaultGlobalTimeline       = 1;
+    uint constant FORTY_FIVE_DECIMAL_NUMBER   = 10 ** 45;
     uint constant TWENTY_SEVEN_DECIMAL_NUMBER = 10 ** 27;
-    uint constant EIGHTEEN_DECIMAL_NUMBER = 10 ** 18;
-    uint256 constant NEGATIVE_RATE_LIMIT = TWENTY_SEVEN_DECIMAL_NUMBER - 1;
+    uint constant EIGHTEEN_DECIMAL_NUMBER     = 10 ** 18;
+    uint256 constant NEGATIVE_RATE_LIMIT      = TWENTY_SEVEN_DECIMAL_NUMBER - 1;
 
     function rpower(uint x, uint n, uint base) internal pure returns (uint z) {
         assembly {
@@ -304,15 +305,15 @@ contract PIRawPerSecondValidatorTest is DSTest {
         (uint newRedemptionRate, int pTerm, int iTerm, uint rateTimeline) =
           validator.getNextRedemptionRate(1.05E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
         assertEq(newRedemptionRate, 1);
-        assertEq(pTerm, -1049999999999999999999999999);
-        assertEq(iTerm, -1979999999999999999999999996400);
+        assertEq(pTerm, -1049999999999999999999999999000000000000000000000000000);
+        assertEq(iTerm, -1889999999999999999999999998290000000000000000000000000000);
 
         assertEq(rateTimeline, defaultGlobalTimeline);
 
         rateSetter.updateRate(42, address(this));
 
         assertEq(uint(validator.lut()), now);
-        assertEq(validator.pdc(), -1979999999999999999999999996400);
+        assertEq(validator.pdc(), -1889999999999999999999999998290000000000000000000000000000);
         assertEq(oracleRelayer.redemptionPrice(), 1);
         assertEq(oracleRelayer.redemptionRate(), 1);
     }
@@ -326,12 +327,13 @@ contract PIRawPerSecondValidatorTest is DSTest {
         rateSetter.updateRate(42, address(this));
 
         hevm.warp(now + validator.ips() * 10); // 10 hours
+        assertEq(oracleRelayer.redemptionPrice(), 1);
 
         (uint newRedemptionRate, int pTerm, int iTerm, uint rateTimeline) =
           validator.getNextRedemptionRate(1.05E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
         assertEq(newRedemptionRate, 1);
-        assertEq(pTerm, -1049999999999999999999999999);
-        assertEq(iTerm, -19799999999999999999999999964000);
+        assertEq(pTerm, -1049999999999999999999999999000000000000000000000000000);
+        assertEq(iTerm, -18899999999999999999999999982900000000000000000000000000000);
         assertEq(rateTimeline, defaultGlobalTimeline);
 
         rateSetter.updateRate(42, address(this));
@@ -375,9 +377,17 @@ contract PIRawPerSecondValidatorTest is DSTest {
 
         (newRedemptionRate, pTerm, iTerm, rateTimeline) =
           validator.getNextRedemptionRate(0.95E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
-        assertEq(newRedemptionRate, 1000000291613001814917161083);
-        assertEq(pTerm, 50520968952868729114836237);
-        assertEq(iTerm, 180937744115163712406705224800);
+        assertEq(newRedemptionRate, 1000000291498825809688551682);
+        assertEq(pTerm, 50494662801263695199553182);
+        assertEq(iTerm, 180890393042274651359195727600);
         assertEq(rateTimeline, defaultGlobalTimeline);
+    }
+    function testFail_redemption_way_higher_than_market() public {
+        assertEq(uint(validator.pdc()), 0);
+        validator.modifyParameters("nb", EIGHTEEN_DECIMAL_NUMBER - 1);
+
+        oracleRelayer.modifyParameters("redemptionPrice", FORTY_FIVE_DECIMAL_NUMBER * EIGHTEEN_DECIMAL_NUMBER);
+
+        rateSetter.updateRate(42, address(this));
     }
 }
