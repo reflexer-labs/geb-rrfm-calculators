@@ -1,20 +1,5 @@
 /// PRawGlobalValidator.sol
 
-// Copyright (C) 2020 Reflexer Labs, INC
-
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 pragma solidity ^0.6.7;
 
 import "../../../math/SafeMath.sol";
@@ -46,36 +31,22 @@ contract PRawGlobalValidator is SafeMath, SignedSafeMath {
     }
 
     // -- Static & Default Variables ---
-    // Kp
     uint256 internal Kp;                             // [EIGHTEEN_DECIMAL_NUMBER]
-    // Percentage of the current redemptionPrice that must be passed by priceDeviationCumulative in order to set a redemptionRate != 0%
     uint256 internal noiseBarrier;                   // [EIGHTEEN_DECIMAL_NUMBER]
-    // Default redemptionRate (0% yearly)
     uint256 internal defaultRedemptionRate;          // [TWENTY_SEVEN_DECIMAL_NUMBER]
-    // Max possible annual redemption rate
     uint256 internal feedbackOutputUpperBound;       // [TWENTY_SEVEN_DECIMAL_NUMBER]
-    // Min possible annual redemption rate
     int256  internal feedbackOutputLowerBound;       // [TWENTY_SEVEN_DECIMAL_NUMBER]
-    // Seconds that must pass between validateSeed calls
     uint256 internal periodSize;                     // [seconds]
 
     // --- Fluctuating/Dynamic Variables ---
-    // Deviation history
     DeviationObservation[] internal deviationObservations;
-    // Lower allowed deviation of the per second rate when checking that, after it is raised to defaultGlobalTimeline seconds, it is close to the contract computed global rate
     uint256 internal lowerPrecomputedRateAllowedDeviation; // [EIGHTEEN_DECIMAL_NUMBER]
-    // Upper allowed deviation of the per second rate when checking that, after it is raised to defaultGlobalTimeline seconds, it is close to the contract computed global rate
     uint256 internal upperPrecomputedRateAllowedDeviation; // [EIGHTEEN_DECIMAL_NUMBER]
-    // Rate applied to lowerPrecomputedRateAllowedDeviation as time passes by and no new seed is validated
     uint256 internal allowedDeviationIncrease;             // [TWENTY_SEVEN_DECIMAL_NUMBER]
-    // Minimum rate timeline
     uint256 internal minRateTimeline;                      // [seconds]
-    // Last time when the rate was computed
     uint256 internal lastUpdateTime;                       // [timestamp]
-    // Default timeline for the global rate
     uint256 internal defaultGlobalTimeline = 31536000;
 
-    // Address that can validate seeds
     address public seedProposer;
 
     uint256 internal constant NEGATIVE_RATE_LIMIT         = TWENTY_SEVEN_DECIMAL_NUMBER - 1;
@@ -199,9 +170,6 @@ contract PRawGlobalValidator is SafeMath, SignedSafeMath {
     }
 
     // --- PI Utils ---
-    /**
-    * @notice Get the observation list length
-    **/
     function oll() public isReader view returns (uint256) {
         return deviationObservations.length;
     }
@@ -267,30 +235,20 @@ contract PRawGlobalValidator is SafeMath, SignedSafeMath {
       uint ,
       uint precomputedAllowedDeviation
     ) external returns (uint256) {
-        // Only the proposer can call
         require(seedProposer == msg.sender, "PRawGlobalValidator/invalid-msg-sender");
-        // Can't update same observation twice
         require(subtract(now, lastUpdateTime) >= periodSize || lastUpdateTime == 0, "PRawGlobalValidator/wait-more");
-        // Calculate proportional term
         int256 proportionalTerm = subtract(int(redemptionPrice), multiply(int(marketPrice), int(10**9)));
-        // Update deviation history
         deviationObservations.push(DeviationObservation(now, proportionalTerm));
-        // Update timestamp
         lastUpdateTime = now;
-        // Calculate the adjusted P output
         int pOutput = getGainAdjustedPOutput(proportionalTerm);
-        // Check if P is greater than noise
         if (
           breaksNoiseBarrier(absolute(pOutput), redemptionPrice) &&
           pOutput != 0
         ) {
-          // Make sure the global rate doesn't exceed the bounds
           (uint newRedemptionRate, ) = getBoundedRedemptionRate(pOutput);
-          // Sanitize the precomputed allowed deviation
           uint256 sanitizedAllowedDeviation =
             (precomputedAllowedDeviation > upperPrecomputedRateAllowedDeviation) ?
             upperPrecomputedRateAllowedDeviation : precomputedAllowedDeviation;
-          // Check that the caller provided a correct precomputed rate
           require(
             correctPreComputedRate(inputAccumulatedPreComputedRate, newRedemptionRate, sanitizedAllowedDeviation),
             "PRawGlobalValidator/invalid-seed"
@@ -302,21 +260,15 @@ contract PRawGlobalValidator is SafeMath, SignedSafeMath {
     }
     function getNextRedemptionRate(uint marketPrice, uint redemptionPrice)
       public isReader view returns (uint256, int256, uint256) {
-        // Calculate proportional term
         int256 proportionalTerm = subtract(int(redemptionPrice), multiply(int(marketPrice), int(10**9)));
-        // Calculate the P output
         int pOutput = getGainAdjustedPOutput(proportionalTerm);
-        // Check if P is greater than noise
         if (
           breaksNoiseBarrier(absolute(pOutput), redemptionPrice) &&
           pOutput != 0
         ) {
-          // Get the new rate as well as the timeline
           (uint newRedemptionRate, uint rateTimeline) = getBoundedRedemptionRate(pOutput);
-          // Return the bounded result
           return (newRedemptionRate, proportionalTerm, rateTimeline);
         } else {
-          // If it's not, simply return the default global rate and the computed terms
           return (TWENTY_SEVEN_DECIMAL_NUMBER, proportionalTerm, defaultGlobalTimeline);
         }
     }

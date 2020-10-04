@@ -1,20 +1,5 @@
 /// PIScaledGlobalValidator.sol
 
-// Copyright (C) 2020 Reflexer Labs, INC
-
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 pragma solidity ^0.6.7;
 
 import "../../../math/SafeMath.sol";
@@ -51,40 +36,24 @@ contract PIScaledGlobalValidator is SafeMath, SignedSafeMath {
     }
 
     // -- Static & Default Variables ---
-    // Kp & Ki
     ControllerGains internal controllerGains;
-    // Percentage of the current redemptionPrice that must be passed by priceDeviationCumulative in order to set a redemptionRate != 0%
     uint256 internal noiseBarrier;                   // [EIGHTEEN_DECIMAL_NUMBER]
-    // Default redemptionRate (0% yearly)
     uint256 internal defaultRedemptionRate;          // [TWENTY_SEVEN_DECIMAL_NUMBER]
-    // Max possible annual redemption rate
     uint256 internal feedbackOutputUpperBound;       // [TWENTY_SEVEN_DECIMAL_NUMBER]
-    // Min possible annual redemption rate
     int256  internal feedbackOutputLowerBound;       // [TWENTY_SEVEN_DECIMAL_NUMBER]
-    // Seconds that must pass between validateSeed calls
     uint256 internal integralPeriodSize;             // [seconds]
 
     // --- Fluctuating/Dynamic Variables ---
-    // Deviation history
     DeviationObservation[] internal deviationObservations;
-    // Accumulator for price deviations
     int256  internal priceDeviationCumulative;             // [TWENTY_SEVEN_DECIMAL_NUMBER]
-    // Leak applied to priceDeviationCumulative before adding the latest time adjusted deviation
     uint256 internal perSecondCumulativeLeak;              // [TWENTY_SEVEN_DECIMAL_NUMBER]
-    // Lower allowed deviation of the per second rate when checking that, after it is raised to defaultGlobalTimeline seconds, it is close to the contract computed global rate
     uint256 internal lowerPrecomputedRateAllowedDeviation; // [EIGHTEEN_DECIMAL_NUMBER]
-    // Upper allowed deviation of the per second rate when checking that, after it is raised to defaultGlobalTimeline seconds, it is close to the contract computed global rate
     uint256 internal upperPrecomputedRateAllowedDeviation; // [EIGHTEEN_DECIMAL_NUMBER]
-    // Rate applied to lowerPrecomputedRateAllowedDeviation as time passes by and no new seed is validated
     uint256 internal allowedDeviationIncrease;             // [TWENTY_SEVEN_DECIMAL_NUMBER]
-    // Minimum rate timeline
     uint256 internal minRateTimeline;                      // [seconds]
-    // Last time when the rate was computed
     uint256 internal lastUpdateTime;                       // [timestamp]
-    // Default timeline for the global rate
     uint256 internal defaultGlobalTimeline = 31536000;
 
-    // Address that can validate seeds
     address public seedProposer;
 
     uint256 internal constant NEGATIVE_RATE_LIMIT         = TWENTY_SEVEN_DECIMAL_NUMBER - 1;
@@ -105,7 +74,7 @@ contract PIScaledGlobalValidator is SafeMath, SignedSafeMath {
         int256  feedbackOutputLowerBound_,
         int256[] memory importedState
     ) public {
-        defaultRedemptionRate           = TWENTY_SEVEN_DECIMAL_NUMBER;
+        defaultRedemptionRate                = TWENTY_SEVEN_DECIMAL_NUMBER;
         require(lowerPrecomputedRateAllowedDeviation_ < EIGHTEEN_DECIMAL_NUMBER, "PIScaledGlobalValidator/invalid-lprad");
         require(upperPrecomputedRateAllowedDeviation_ <= lowerPrecomputedRateAllowedDeviation_, "PIScaledGlobalValidator/invalid-uprad");
         require(allowedDeviationIncrease_ <= TWENTY_SEVEN_DECIMAL_NUMBER, "PIScaledGlobalValidator/invalid-adi");
@@ -225,9 +194,6 @@ contract PIScaledGlobalValidator is SafeMath, SignedSafeMath {
         if (oll() == 0) return 0;
         return deviationObservations[oll() - 1].integral;
     }
-    /**
-    * @notice Get the observation list length
-    **/
     function oll() public isReader view returns (uint256) {
         return deviationObservations.length;
     }
@@ -303,7 +269,7 @@ contract PIScaledGlobalValidator is SafeMath, SignedSafeMath {
         return (adjustedProportional, adjustedIntegral);
     }
 
-    // --- Rate Validation ---
+    // --- Rate Validation/Calculation ---
     function validateSeed(
       uint seed,
       uint inputAccumulatedPreComputedRate,
@@ -312,32 +278,21 @@ contract PIScaledGlobalValidator is SafeMath, SignedSafeMath {
       uint accumulatedLeak,
       uint precomputedAllowedDeviation
     ) external returns (uint256) {
-        // Only the proposer can call
         require(seedProposer == msg.sender, "PIScaledGlobalValidator/invalid-msg-sender");
-        // Can't update same observation twice
         require(subtract(now, lastUpdateTime) >= integralPeriodSize || lastUpdateTime == 0, "PIScaledGlobalValidator/wait-more");
-        // Get the scaled market price
         uint256 scaledMarketPrice = multiply(marketPrice, 10**9);
-        // Calculate proportional term
         int256 proportionalTerm = multiply(subtract(int(redemptionPrice), int(scaledMarketPrice)), int(TWENTY_SEVEN_DECIMAL_NUMBER)) / int(redemptionPrice);
-        // Update deviation history
         updateDeviationHistory(proportionalTerm, accumulatedLeak);
-        // Update timestamp
         lastUpdateTime = now;
-        // Calculate the adjusted PI output
         int piOutput = getGainAdjustedPIOutput(proportionalTerm, priceDeviationCumulative);
-        // Check if P + I is greater than noise and non null
         if (
           breaksNoiseBarrier(absolute(piOutput), redemptionPrice) &&
           piOutput != 0
         ) {
-          // Make sure the global rate doesn't exceed the bounds
           (uint newRedemptionRate, ) = getBoundedRedemptionRate(piOutput);
-          // Sanitize the precomputed allowed deviation
           uint256 sanitizedAllowedDeviation =
             (precomputedAllowedDeviation > upperPrecomputedRateAllowedDeviation) ?
             upperPrecomputedRateAllowedDeviation : precomputedAllowedDeviation;
-          // Check that the caller provided a correct precomputed rate
           require(
             correctPreComputedRate(inputAccumulatedPreComputedRate, newRedemptionRate, sanitizedAllowedDeviation),
             "PIScaledGlobalValidator/invalid-seed"
@@ -347,7 +302,6 @@ contract PIScaledGlobalValidator is SafeMath, SignedSafeMath {
           return TWENTY_SEVEN_DECIMAL_NUMBER;
         }
     }
-    // Update accumulator and deviation history
     function updateDeviationHistory(int proportionalTerm, uint accumulatedLeak) internal {
         (int256 virtualDeviationCumulative, int256 nextTimeAdjustedDeviation) =
           getNextPriceDeviationCumulative(proportionalTerm, accumulatedLeak);
@@ -356,25 +310,17 @@ contract PIScaledGlobalValidator is SafeMath, SignedSafeMath {
     }
     function getNextRedemptionRate(uint marketPrice, uint redemptionPrice, uint accumulatedLeak)
       public isReader view returns (uint256, int256, int256, uint256) {
-        // Get the scaled market price
-        uint256 scaledMarketPrice = multiply(marketPrice, 10**9);
-        // Calculate proportional term
-        int256 proportionalTerm = multiply(subtract(int(redemptionPrice), int(scaledMarketPrice)), int(TWENTY_SEVEN_DECIMAL_NUMBER)) / int(redemptionPrice);
-        // Get cumulative price deviation
+        uint256 scaledMarketPrice   = multiply(marketPrice, 10**9);
+        int256 proportionalTerm     = multiply(subtract(int(redemptionPrice), int(scaledMarketPrice)), int(TWENTY_SEVEN_DECIMAL_NUMBER)) / int(redemptionPrice);
         (int cumulativeDeviation, ) = getNextPriceDeviationCumulative(proportionalTerm, accumulatedLeak);
-        // Calculate the PI output
         int piOutput = getGainAdjustedPIOutput(proportionalTerm, cumulativeDeviation);
-        // Check if P + I is greater than noise
         if (
           breaksNoiseBarrier(absolute(piOutput), redemptionPrice) &&
           piOutput != 0
         ) {
-          // Get the new rate as well as the timeline
           (uint newRedemptionRate, uint rateTimeline) = getBoundedRedemptionRate(piOutput);
-          // Return the bounded result
           return (newRedemptionRate, proportionalTerm, cumulativeDeviation, rateTimeline);
         } else {
-          // If it's not, simply return the default global rate and the computed terms
           return (TWENTY_SEVEN_DECIMAL_NUMBER, proportionalTerm, cumulativeDeviation, defaultGlobalTimeline);
         }
     }

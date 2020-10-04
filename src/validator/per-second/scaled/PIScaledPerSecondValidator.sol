@@ -1,20 +1,5 @@
 /// PIScaledPerSecondValidator.sol
 
-// Copyright (C) 2020 Reflexer Labs, INC
-
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 pragma solidity ^0.6.7;
 
 import "../../../math/SafeMath.sol";
@@ -51,29 +36,18 @@ contract PIScaledPerSecondValidator is SafeMath, SignedSafeMath {
     }
 
     // -- Static & Default Variables ---
-    // Kp & Ki
     ControllerGains internal controllerGains;
-    // Percentage of the current redemptionPrice that must be passed by priceDeviationCumulative in order to set a redemptionRate != 0%
     uint256 internal noiseBarrier;                   // [EIGHTEEN_DECIMAL_NUMBER]
-    // Default redemptionRate (0% yearly)
     uint256 internal defaultRedemptionRate;          // [TWENTY_SEVEN_DECIMAL_NUMBER]
-    // Output upper bound
     uint256 internal feedbackOutputUpperBound;       // [TWENTY_SEVEN_DECIMAL_NUMBER]
-    // Output lower bound
     int256  internal feedbackOutputLowerBound;       // [TWENTY_SEVEN_DECIMAL_NUMBER]
-    // Seconds that must pass between validateSeed calls
     uint256 internal integralPeriodSize;             // [seconds]
 
     // --- Fluctuating/Dynamic Variables ---
-    // Deviation history
     DeviationObservation[] internal deviationObservations;
-    // Accumulator for price deviations
     int256  internal priceDeviationCumulative;             // [TWENTY_SEVEN_DECIMAL_NUMBER]
-    // Leak applied to priceDeviationCumulative before adding the latest time adjusted deviation
     uint256 internal perSecondCumulativeLeak;              // [TWENTY_SEVEN_DECIMAL_NUMBER]
-    // Last time when the rate was computed
     uint256 internal lastUpdateTime;                       // [timestamp]
-    // Default timeline for the global rate
     uint256 constant internal defaultGlobalTimeline = 1;
 
     // Address that can validate seeds
@@ -186,9 +160,6 @@ contract PIScaledPerSecondValidator is SafeMath, SignedSafeMath {
         if (oll() == 0) return 0;
         return deviationObservations[oll() - 1].integral;
     }
-    /**
-    * @notice Get the observation list length
-    **/
     function oll() public isReader view returns (uint256) {
         return deviationObservations.length;
     }
@@ -244,7 +215,7 @@ contract PIScaledPerSecondValidator is SafeMath, SignedSafeMath {
         return (adjustedProportional, adjustedIntegral);
     }
 
-    // --- Rate Validation ---
+    // --- Rate Validation/Calculation ---
     function validateSeed(
       uint,
       uint,
@@ -253,33 +224,23 @@ contract PIScaledPerSecondValidator is SafeMath, SignedSafeMath {
       uint accumulatedLeak,
       uint
     ) external returns (uint256) {
-        // Only the proposer can call
         require(seedProposer == msg.sender, "PIScaledPerSecondValidator/invalid-msg-sender");
-        // Can't update same observation twice
         require(subtract(now, lastUpdateTime) >= integralPeriodSize || lastUpdateTime == 0, "PIScaledPerSecondValidator/wait-more");
-        // Get the scaled market price
         uint256 scaledMarketPrice = multiply(marketPrice, 10**9);
-        // Calculate proportional term
         int256 proportionalTerm = multiply(subtract(int(redemptionPrice), int(scaledMarketPrice)), int(TWENTY_SEVEN_DECIMAL_NUMBER)) / int(redemptionPrice);
-        // Update deviation history
         updateDeviationHistory(proportionalTerm, accumulatedLeak);
-        // Update timestamp
         lastUpdateTime = now;
-        // Calculate the gain adjusted PI output
         int256 piOutput = getGainAdjustedPIOutput(proportionalTerm, priceDeviationCumulative);
-        // Check if Kp * P + Ki * I is greater than noise and non null
         if (
           breaksNoiseBarrier(absolute(piOutput), redemptionPrice) &&
           piOutput != 0
         ) {
-          // Compute the rate and return it
           (uint newRedemptionRate, ) = getBoundedRedemptionRate(piOutput);
           return newRedemptionRate;
         } else {
           return TWENTY_SEVEN_DECIMAL_NUMBER;
         }
     }
-    // Update accumulator and deviation history
     function updateDeviationHistory(int proportionalTerm, uint accumulatedLeak) internal {
         (int256 virtualDeviationCumulative, int256 nextTimeAdjustedDeviation) =
           getNextPriceDeviationCumulative(proportionalTerm, accumulatedLeak);
@@ -288,25 +249,17 @@ contract PIScaledPerSecondValidator is SafeMath, SignedSafeMath {
     }
     function getNextRedemptionRate(uint marketPrice, uint redemptionPrice, uint accumulatedLeak)
       public isReader view returns (uint256, int256, int256, uint256) {
-        // Get the scaled market price
         uint256 scaledMarketPrice = multiply(marketPrice, 10**9);
-        // Calculate proportional term
         int256 proportionalTerm = multiply(subtract(int(redemptionPrice), int(scaledMarketPrice)), int(TWENTY_SEVEN_DECIMAL_NUMBER)) / int(redemptionPrice);
-        // Get cumulative price deviation
         (int cumulativeDeviation, ) = getNextPriceDeviationCumulative(proportionalTerm, accumulatedLeak);
-        // Calculate the PI output
         int piOutput = getGainAdjustedPIOutput(proportionalTerm, cumulativeDeviation);
-        // Check if Kp * P + Ki * I is greater than noise
         if (
           breaksNoiseBarrier(absolute(piOutput), redemptionPrice) &&
           piOutput != 0
         ) {
-          // Get the new rate and the timeline
           (uint newRedemptionRate, uint rateTimeline) = getBoundedRedemptionRate(piOutput);
-          // Return the bounded result
           return (newRedemptionRate, proportionalTerm, cumulativeDeviation, rateTimeline);
         } else {
-          // If it's not, simply return the default global rate and the computed terms
           return (TWENTY_SEVEN_DECIMAL_NUMBER, proportionalTerm, cumulativeDeviation, defaultGlobalTimeline);
         }
     }
