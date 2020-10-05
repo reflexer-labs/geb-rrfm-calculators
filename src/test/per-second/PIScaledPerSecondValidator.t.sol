@@ -390,4 +390,51 @@ contract PIScaledPerSecondValidatorTest is DSTest {
 
         rateSetter.updateRate(42, address(this));
     }
+    function test_correct_proportional_calculation() public {
+        assertEq(uint(validator.pdc()), 0);
+        validator.modifyParameters("nb", EIGHTEEN_DECIMAL_NUMBER - 1);
+
+        oracleRelayer.redemptionPrice();
+        oracleRelayer.modifyParameters("redemptionPrice", 2E27);
+        hevm.warp(now + validator.ips());
+
+        (uint newRedemptionRate, int pTerm, int iTerm, uint rateTimeline) =
+          validator.getNextRedemptionRate(2.05E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
+        assertEq(newRedemptionRate, 0.975E27);
+        assertEq(pTerm, -0.025E27);
+        assertEq(iTerm, 0);
+        assertEq(rateTimeline, defaultGlobalTimeline);
+
+        Kp = Kp / 4 / validator.ips() / 96;
+        Ki = 0;
+
+        assertEq(Kp, 723379629629);
+        assertEq(Ki, 0);
+        assertEq(Kp * 4 * validator.ips() * 96, 999999999999129600);
+
+        validator.modifyParameters("sg", Kp);
+        validator.modifyParameters("ag", Ki);
+
+        (newRedemptionRate, pTerm, iTerm, rateTimeline) =
+          validator.getNextRedemptionRate(2.05E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
+        assertEq(newRedemptionRate, 999999981915509259275000000);
+        assertEq(pTerm, -0.025E27);
+        assertEq(iTerm, 0);
+        assertEq(rateTimeline, defaultGlobalTimeline);
+
+        (int gainAdjustedP,) = validator.getGainAdjustedTerms(-int(0.025E27), int(0));
+        assertEq(gainAdjustedP, -18084490740725000000);
+        assertEq(gainAdjustedP * int(96) * int(validator.ips()) * int(4), -24999999999978240000000000);
+
+        (newRedemptionRate, pTerm, iTerm, rateTimeline) =
+          validator.getNextRedemptionRate(1.95E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
+        assertEq(newRedemptionRate, 1000000018084490740725000000);
+        assertEq(pTerm, 0.025E27);
+        assertEq(iTerm, 0);
+        assertEq(rateTimeline, defaultGlobalTimeline);
+
+        (gainAdjustedP, ) = validator.getGainAdjustedTerms(int(0.025E27), int(0));
+        assertEq(gainAdjustedP, 18084490740725000000);
+        assertEq(gainAdjustedP * int(96) * int(validator.ips()) * int(4), 24999999999978240000000000);
+    }
 }
