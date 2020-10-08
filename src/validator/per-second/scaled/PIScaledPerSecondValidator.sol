@@ -45,6 +45,8 @@ contract PIScaledPerSecondValidator is SafeMath, SignedSafeMath {
 
     // --- Fluctuating/Dynamic Variables ---
     DeviationObservation[] internal deviationObservations;
+    int256[]               internal historicalCumulativeDeviations;
+
     int256  internal priceDeviationCumulative;             // [TWENTY_SEVEN_DECIMAL_NUMBER]
     uint256 internal perSecondCumulativeLeak;              // [TWENTY_SEVEN_DECIMAL_NUMBER]
     uint256 internal lastUpdateTime;                       // [timestamp]
@@ -89,6 +91,7 @@ contract PIScaledPerSecondValidator is SafeMath, SignedSafeMath {
             DeviationObservation(uint(importedState[4]), importedState[1], importedState[2])
           );
         }
+        historicalCumulativeDeviations.push(priceDeviationCumulative);
     }
 
     // --- Boolean Logic ---
@@ -242,6 +245,7 @@ contract PIScaledPerSecondValidator is SafeMath, SignedSafeMath {
         (int256 virtualDeviationCumulative, int256 nextTimeAdjustedDeviation) =
           getNextPriceDeviationCumulative(proportionalTerm, accumulatedLeak);
         priceDeviationCumulative = virtualDeviationCumulative;
+        historicalCumulativeDeviations.push(priceDeviationCumulative);
         deviationObservations.push(DeviationObservation(now, proportionalTerm, priceDeviationCumulative));
     }
     function getNextRedemptionRate(uint marketPrice, uint redemptionPrice, uint accumulatedLeak)
@@ -289,6 +293,9 @@ contract PIScaledPerSecondValidator is SafeMath, SignedSafeMath {
     }
     function dos(uint256 i) external isReader view returns (uint256, int256, int256) {
         return (deviationObservations[i].timestamp, deviationObservations[i].proportional, deviationObservations[i].integral);
+    }
+    function hcd(uint256 i) external isReader view returns (int256) {
+        return historicalCumulativeDeviations[i];
     }
     function pdc() external isReader view returns (int256) {
         return priceDeviationCumulative;
