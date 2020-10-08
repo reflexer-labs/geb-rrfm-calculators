@@ -37,8 +37,8 @@ contract PIScaledPerSecondValidatorTest is DSTest {
     PIScaledPerSecondValidator validator;
     Feed orcl;
 
-    uint256 Kp                                = EIGHTEEN_DECIMAL_NUMBER;
-    uint256 Ki                                = EIGHTEEN_DECIMAL_NUMBER;
+    int256 Kp                                 = int(EIGHTEEN_DECIMAL_NUMBER);
+    int256 Ki                                 = int(EIGHTEEN_DECIMAL_NUMBER);
     uint256 integralPeriodSize                = 3600;
     uint256 baseUpdateCallerReward            = 10 ether;
     uint256 maxUpdateCallerReward             = 30 ether;
@@ -142,8 +142,8 @@ contract PIScaledPerSecondValidatorTest is DSTest {
         // Uint
         validator.modifyParameters("nb", EIGHTEEN_DECIMAL_NUMBER);
         validator.modifyParameters("ips", uint(2));
-        validator.modifyParameters("sg", uint(1));
-        validator.modifyParameters("ag", uint(1));
+        validator.modifyParameters("sg", int(1));
+        validator.modifyParameters("ag", int(1));
         validator.modifyParameters("foub", uint(TWENTY_SEVEN_DECIMAL_NUMBER + 1));
         validator.modifyParameters("folb", -int(1));
         validator.modifyParameters("pscl", uint(TWENTY_SEVEN_DECIMAL_NUMBER - 5));
@@ -155,8 +155,8 @@ contract PIScaledPerSecondValidatorTest is DSTest {
         assertEq(validator.pscl(), TWENTY_SEVEN_DECIMAL_NUMBER - 5);
         assertEq(validator.mrt(), 1);
 
-        assertEq(uint(1), validator.ag());
-        assertEq(uint(1), validator.sg());
+        assertEq(int(1), validator.ag());
+        assertEq(int(1), validator.sg());
     }
     function test_get_new_rate_no_proportional_no_integral() public {
         (uint newRedemptionRate, int pTerm, int iTerm, uint rateTimeline) =
@@ -352,8 +352,8 @@ contract PIScaledPerSecondValidatorTest is DSTest {
         assertEq(iTerm, 0);
         assertEq(rateTimeline, defaultGlobalTimeline);
 
-        Kp = Kp / 4 / (validator.ips() * 24);
-        Ki = Ki / 4 / validator.ips() ** 2 / 24;
+        Kp = Kp / 4 / int(validator.ips() * 24);
+        Ki = Ki / 4 / int(validator.ips() ** 2) / 24;
 
         assertEq(Kp, 2893518518518);
         assertEq(Ki, 803755144);
@@ -405,12 +405,12 @@ contract PIScaledPerSecondValidatorTest is DSTest {
         assertEq(iTerm, 0);
         assertEq(rateTimeline, defaultGlobalTimeline);
 
-        Kp = Kp / 4 / validator.ips() / 96;
+        Kp = Kp / 4 / int(validator.ips()) / 96;
         Ki = 0;
 
         assertEq(Kp, 723379629629);
         assertEq(Ki, 0);
-        assertEq(Kp * 4 * validator.ips() * 96, 999999999999129600);
+        assertEq(Kp * 4 * int(validator.ips()) * 96, 999999999999129600);
 
         validator.modifyParameters("sg", Kp);
         validator.modifyParameters("ag", Ki);
