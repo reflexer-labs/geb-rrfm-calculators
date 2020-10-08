@@ -37,8 +37,8 @@ contract PIRawGlobalValidatorTest is DSTest {
     PIRawGlobalValidator validator;
     Feed orcl;
 
-    uint256 Kp                                   = EIGHTEEN_DECIMAL_NUMBER;
-    uint256 Ki                                   = EIGHTEEN_DECIMAL_NUMBER;
+    int256 Kp                                    = int(EIGHTEEN_DECIMAL_NUMBER);
+    int256 Ki                                    = int(EIGHTEEN_DECIMAL_NUMBER);
     uint256 minRateTimeline                      = 0;
     uint256 integralPeriodSize                   = 3600;
     uint256 lowerPrecomputedRateAllowedDeviation = 0.99E18;
@@ -151,8 +151,8 @@ contract PIRawGlobalValidatorTest is DSTest {
         // Uint
         validator.modifyParameters("nb", EIGHTEEN_DECIMAL_NUMBER);
         validator.modifyParameters("ips", uint(2));
-        validator.modifyParameters("sg", uint(1));
-        validator.modifyParameters("ag", uint(1));
+        validator.modifyParameters("sg", int(1));
+        validator.modifyParameters("ag", int(1));
         validator.modifyParameters("foub", uint(TWENTY_SEVEN_DECIMAL_NUMBER + 1));
         validator.modifyParameters("folb", -int(1));
         validator.modifyParameters("pscl", uint(TWENTY_SEVEN_DECIMAL_NUMBER - 5));
@@ -165,8 +165,8 @@ contract PIRawGlobalValidatorTest is DSTest {
         assertEq(validator.pscl(), TWENTY_SEVEN_DECIMAL_NUMBER - 5);
         assertEq(validator.mrt(), uint(24 * 3600));
 
-        assertEq(uint(1), validator.ag());
-        assertEq(uint(1), validator.sg());
+        assertEq(int(1), validator.ag());
+        assertEq(int(1), validator.sg());
     }
     function test_get_new_rate_no_proportional_no_integral() public {
         (uint newRedemptionRate, int pTerm, int iTerm, uint rateTimeline) =
@@ -359,7 +359,7 @@ contract PIRawGlobalValidatorTest is DSTest {
         rateSetter.updateRate(996457582242966555861814356, address(this));
     }
     function test_deactivate_integral() public {
-        validator.modifyParameters("ag", uint(0));
+        validator.modifyParameters("ag", int(0));
 
         assertEq(uint(validator.pdc()), 0);
         validator.modifyParameters("nb", uint(0.995E18));
@@ -387,7 +387,7 @@ contract PIRawGlobalValidatorTest is DSTest {
     }
     function test_update_after_one_year() public {
         validator.modifyParameters("nb", uint(1E18));
-        validator.modifyParameters("ag", uint(0));
+        validator.modifyParameters("ag", int(0));
         oracleRelayer.modifyParameters("redemptionPrice", 4.2E27);
         assertEq(oracleRelayer.redemptionPrice(), 4.2E27);
 
@@ -415,7 +415,7 @@ contract PIRawGlobalValidatorTest is DSTest {
     }
     function test_valid_updated_allowed_deviation() public {
         validator.modifyParameters("nb", uint(1E18));
-        validator.modifyParameters("ag", uint(0));
+        validator.modifyParameters("ag", int(0));
 
         assertEq(rateSetter.adjustedAllowedDeviation(), validator.uprad());
         rateSetter.updateRate(TWENTY_SEVEN_DECIMAL_NUMBER, address(this));

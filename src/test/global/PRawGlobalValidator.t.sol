@@ -37,7 +37,7 @@ contract PRawGlobalValidatorTest is DSTest {
     PRawGlobalValidator validator;
     Feed orcl;
 
-    uint256 Kp                                   = EIGHTEEN_DECIMAL_NUMBER;
+    int256 Kp                                    = int(EIGHTEEN_DECIMAL_NUMBER);
     uint256 periodSize                           = 3600;
     uint256 minRateTimeline                      = 0;
     uint256 lowerPrecomputedRateAllowedDeviation = 0.99E18;
@@ -113,7 +113,7 @@ contract PRawGlobalValidatorTest is DSTest {
         // Uint
         validator.modifyParameters("nb", EIGHTEEN_DECIMAL_NUMBER);
         validator.modifyParameters("ps", uint(1));
-        validator.modifyParameters("sg", uint(1));
+        validator.modifyParameters("sg", int(1));
         validator.modifyParameters("foub", TWENTY_SEVEN_DECIMAL_NUMBER + 1);
         validator.modifyParameters("folb", -int(1));
         validator.modifyParameters("mrt", uint(24 * 3600));
@@ -121,7 +121,7 @@ contract PRawGlobalValidatorTest is DSTest {
         assertEq(validator.nb(), EIGHTEEN_DECIMAL_NUMBER);
         assertEq(validator.foub(), TWENTY_SEVEN_DECIMAL_NUMBER + 1);
         assertEq(validator.ps(), 1);
-        assertEq(validator.sg(), 1);
+        assertEq(validator.sg(), int(1));
         assertEq(validator.folb(), -int(1));
         assertEq(validator.mrt(), 24 * 3600);
         assertEq(1, validator.sg());
@@ -275,7 +275,7 @@ contract PRawGlobalValidatorTest is DSTest {
     }
     function test_proportional_warp_positive_above_positive_hundred_percent() public {
         validator.modifyParameters("nb", uint(0.995E18));
-        validator.modifyParameters("sg", uint(10E18));
+        validator.modifyParameters("sg", int(10E18));
 
         hevm.warp(now + validator.ps() * 2);
         orcl.updateTokenPrice(0.5E18);
@@ -289,7 +289,7 @@ contract PRawGlobalValidatorTest is DSTest {
     }
     function test_proportional_warp_positive_below_negative_hundred_percent_ray_divisible() public {
         validator.modifyParameters("nb", uint(0.995E18));
-        validator.modifyParameters("sg", uint(10E18));
+        validator.modifyParameters("sg", int(10E18));
 
         hevm.warp(now + validator.ps() * 2);
         orcl.updateTokenPrice(1.5E18);
@@ -313,7 +313,7 @@ contract PRawGlobalValidatorTest is DSTest {
     }
     function test_proportional_warp_positive_below_negative_hundred_percent_ray_non_divisible() public {
         validator.modifyParameters("nb", uint(0.995E18));
-        validator.modifyParameters("sg", uint(10E18));
+        validator.modifyParameters("sg", int(10E18));
 
         hevm.warp(now + validator.ps() * 2);
         orcl.updateTokenPrice(1.52E18);

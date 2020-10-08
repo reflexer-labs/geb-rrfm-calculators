@@ -69,8 +69,6 @@ contract PIScaledPerSecondValidator is SafeMath, SignedSafeMath {
     ) public {
         defaultRedemptionRate           = TWENTY_SEVEN_DECIMAL_NUMBER;
         require(Kp_ != 0, "PIScaledPerSecondValidator/null-sg");
-        require(both(Kp_ >= -int(EIGHTEEN_DECIMAL_NUMBER), Kp_ <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIScaledPerSecondValidator/invalid-sg");
-        require(both(Ki_ >= -int(EIGHTEEN_DECIMAL_NUMBER), Ki_ <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIScaledPerSecondValidator/invalid-ag");
         require(both(feedbackOutputUpperBound_ < subtract(subtract(uint(-1), defaultRedemptionRate), 1), feedbackOutputUpperBound_ > 0), "PIScaledPerSecondValidator/invalid-foub");
         require(both(feedbackOutputLowerBound_ < 0, feedbackOutputLowerBound_ >= -int(NEGATIVE_RATE_LIMIT)), "PIScaledPerSecondValidator/invalid-folb");
         require(integralPeriodSize_ > 0, "PIScaledPerSecondValidator/invalid-ips");
@@ -133,11 +131,9 @@ contract PIScaledPerSecondValidator is SafeMath, SignedSafeMath {
         }
         else if (parameter == "sg") {
           require(val != 0, "PIScaledPerSecondValidator/null-sg");
-          require(both(val >= -int(EIGHTEEN_DECIMAL_NUMBER), val <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIScaledPerSecondValidator/invalid-sg");
           controllerGains.Kp = val;
         }
         else if (parameter == "ag") {
-          require(both(val >= -int(EIGHTEEN_DECIMAL_NUMBER), val <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIScaledPerSecondValidator/invalid-ag");
           controllerGains.Ki = val;
         }
         else if (parameter == "pdc") {

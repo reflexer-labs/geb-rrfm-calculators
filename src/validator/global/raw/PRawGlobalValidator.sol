@@ -31,7 +31,7 @@ contract PRawGlobalValidator is SafeMath, SignedSafeMath {
     }
 
     // -- Static & Default Variables ---
-    uint256 internal Kp;                             // [EIGHTEEN_DECIMAL_NUMBER]
+    int256 internal Kp;                              // [EIGHTEEN_DECIMAL_NUMBER]
     uint256 internal noiseBarrier;                   // [EIGHTEEN_DECIMAL_NUMBER]
     uint256 internal defaultRedemptionRate;          // [TWENTY_SEVEN_DECIMAL_NUMBER]
     uint256 internal feedbackOutputUpperBound;       // [TWENTY_SEVEN_DECIMAL_NUMBER]
@@ -54,7 +54,7 @@ contract PRawGlobalValidator is SafeMath, SignedSafeMath {
     uint256 internal constant EIGHTEEN_DECIMAL_NUMBER     = 10 ** 18;
 
     constructor(
-        uint256 Kp_,
+        int256 Kp_,
         uint256 periodSize_,
         uint256 lowerPrecomputedRateAllowedDeviation_,
         uint256 upperPrecomputedRateAllowedDeviation_,
@@ -69,7 +69,7 @@ contract PRawGlobalValidator is SafeMath, SignedSafeMath {
         require(lowerPrecomputedRateAllowedDeviation_ < EIGHTEEN_DECIMAL_NUMBER, "PRawGlobalValidator/invalid-lprad");
         require(upperPrecomputedRateAllowedDeviation_ <= lowerPrecomputedRateAllowedDeviation_, "PRawGlobalValidator/invalid-uprad");
         require(allowedDeviationIncrease_ <= TWENTY_SEVEN_DECIMAL_NUMBER, "PRawGlobalValidator/invalid-adi");
-        require(Kp_ > 0, "PRawGlobalValidator/null-sg");
+        require(Kp_ != 0, "PRawGlobalValidator/null-sg");
         require(
           feedbackOutputUpperBound_ <= multiply(TWENTY_SEVEN_DECIMAL_NUMBER, EIGHTEEN_DECIMAL_NUMBER) &&
           feedbackOutputLowerBound_ >= -int(multiply(TWENTY_SEVEN_DECIMAL_NUMBER, EIGHTEEN_DECIMAL_NUMBER)) && feedbackOutputLowerBound_ < 0,
@@ -120,10 +120,6 @@ contract PRawGlobalValidator is SafeMath, SignedSafeMath {
           require(val > 0, "PRawGlobalValidator/null-ps");
           periodSize = val;
         }
-        else if (parameter == "sg") {
-          require(val > 0, "PRawGlobalValidator/null-sg");
-          Kp = val;
-        }
         else if (parameter == "mrt") {
           require(both(val > 0, val <= defaultGlobalTimeline), "PRawGlobalValidator/invalid-mrt");
           minRateTimeline = val;
@@ -157,6 +153,10 @@ contract PRawGlobalValidator is SafeMath, SignedSafeMath {
             "PRawGlobalValidator/invalid-folb"
           );
           feedbackOutputLowerBound = val;
+        }
+        else if (parameter == "sg") {
+          require(val != 0, "PRawGlobalValidator/null-sg");
+          Kp = val;
         }
         else revert("PRawGlobalValidator/modify-unrecognized-param");
     }
@@ -221,9 +221,7 @@ contract PRawGlobalValidator is SafeMath, SignedSafeMath {
         return (withinBounds && sameSign);
     }
     function getGainAdjustedPOutput(int proportionalTerm) public isReader view returns (int256) {
-        bool pTermExceedsMaxUint = (absolute(proportionalTerm) >= uint(-1) / Kp);
-        int adjustedProportional = (pTermExceedsMaxUint) ? proportionalTerm : multiply(proportionalTerm, int(Kp)) / int(EIGHTEEN_DECIMAL_NUMBER);
-        return adjustedProportional;
+        return multiply(proportionalTerm, int(Kp)) / int(EIGHTEEN_DECIMAL_NUMBER);
     }
 
     // --- Rate Validation ---
@@ -278,7 +276,7 @@ contract PRawGlobalValidator is SafeMath, SignedSafeMath {
         (, , uint rateTimeline) = getNextRedemptionRate(marketPrice, redemptionPrice);
         return rateTimeline;
     }
-    function sg() external isReader view returns (uint256) {
+    function sg() external isReader view returns (int256) {
         return Kp;
     }
     function nb() external isReader view returns (uint256) {

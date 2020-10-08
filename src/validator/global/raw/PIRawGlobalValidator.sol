@@ -26,8 +26,8 @@ contract PIRawGlobalValidator is SafeMath, SignedSafeMath {
 
     // --- Structs ---
     struct ControllerGains {
-        uint Kp;                                      // [EIGHTEEN_DECIMAL_NUMBER]
-        uint Ki;                                      // [EIGHTEEN_DECIMAL_NUMBER]
+        int Kp;                                      // [EIGHTEEN_DECIMAL_NUMBER]
+        int Ki;                                      // [EIGHTEEN_DECIMAL_NUMBER]
     }
     struct DeviationObservation {
         uint timestamp;
@@ -61,8 +61,8 @@ contract PIRawGlobalValidator is SafeMath, SignedSafeMath {
     uint256 internal constant EIGHTEEN_DECIMAL_NUMBER     = 10 ** 18;
 
     constructor(
-        uint256 Kp_,
-        uint256 Ki_,
+        int256 Kp_,
+        int256 Ki_,
         uint256 perSecondCumulativeLeak_,
         uint256 integralPeriodSize_,
         uint256 lowerPrecomputedRateAllowedDeviation_,
@@ -78,7 +78,7 @@ contract PIRawGlobalValidator is SafeMath, SignedSafeMath {
         require(lowerPrecomputedRateAllowedDeviation_ < EIGHTEEN_DECIMAL_NUMBER, "PIRawGlobalValidator/invalid-lprad");
         require(upperPrecomputedRateAllowedDeviation_ <= lowerPrecomputedRateAllowedDeviation_, "PIRawGlobalValidator/invalid-uprad");
         require(allowedDeviationIncrease_ <= TWENTY_SEVEN_DECIMAL_NUMBER, "PIRawGlobalValidator/invalid-adi");
-        require(Kp_ > 0, "PIRawGlobalValidator/null-sg");
+        require(Kp_ != 0, "PIRawGlobalValidator/null-sg");
         require(feedbackOutputUpperBound_ < subtract(subtract(uint(-1), defaultRedemptionRate), 1) && feedbackOutputLowerBound_ < 0, "PIRawGlobalValidator/invalid-foub-or-folb");
         require(integralPeriodSize_ > 0, "PIRawGlobalValidator/invalid-ips");
         require(minRateTimeline_ <= defaultGlobalTimeline, "PIRawGlobalValidator/invalid-mrt");
@@ -128,13 +128,6 @@ contract PIRawGlobalValidator is SafeMath, SignedSafeMath {
           require(val > 0, "PIRawGlobalValidator/null-ips");
           integralPeriodSize = val;
         }
-        else if (parameter == "sg") {
-          require(val > 0, "PIRawGlobalValidator/null-sg");
-          controllerGains.Kp = val;
-        }
-        else if (parameter == "ag") {
-          controllerGains.Ki = val;
-        }
         else if (parameter == "mrt") {
           require(both(val > 0, val <= defaultGlobalTimeline), "PIRawGlobalValidator/invalid-mrt");
           minRateTimeline = val;
@@ -169,6 +162,13 @@ contract PIRawGlobalValidator is SafeMath, SignedSafeMath {
         if (parameter == "folb") {
           require(val < 0, "PIRawGlobalValidator/invalid-folb");
           feedbackOutputLowerBound = val;
+        }
+        else if (parameter == "sg") {
+          require(val != 0, "PIRawGlobalValidator/null-sg");
+          controllerGains.Kp = val;
+        }
+        else if (parameter == "ag") {
+          controllerGains.Ki = val;
         }
         else if (parameter == "pdc") {
           require(controllerGains.Ki == 0, "PIRawGlobalValidator/cannot-set-pdc");
@@ -260,13 +260,10 @@ contract PIRawGlobalValidator is SafeMath, SignedSafeMath {
         return addition(adjustedProportional, adjustedIntegral);
     }
     function getGainAdjustedTerms(int proportionalTerm, int integralTerm) public isReader view returns (int256, int256) {
-        bool pTermExceedsMaxUint = (absolute(proportionalTerm) >= uint(-1) / controllerGains.Kp);
-        bool iTermExceedsMaxUint = (controllerGains.Ki == 0) ? false : (absolute(integralTerm) >= uint(-1) / controllerGains.Ki);
-
-        int adjustedProportional = (pTermExceedsMaxUint) ? proportionalTerm : multiply(proportionalTerm, int(controllerGains.Kp)) / int(EIGHTEEN_DECIMAL_NUMBER);
-        int adjustedIntegral     = (iTermExceedsMaxUint) ? integralTerm : multiply(integralTerm, int(controllerGains.Ki)) / int(EIGHTEEN_DECIMAL_NUMBER);
-
-        return (adjustedProportional, adjustedIntegral);
+        return (
+          multiply(proportionalTerm, int(controllerGains.Kp)) / int(EIGHTEEN_DECIMAL_NUMBER),
+          multiply(integralTerm, int(controllerGains.Ki)) / int(EIGHTEEN_DECIMAL_NUMBER)
+        );
     }
 
     // --- Rate Validation/Calculation ---
@@ -329,10 +326,10 @@ contract PIRawGlobalValidator is SafeMath, SignedSafeMath {
         (, , , uint rateTimeline) = getNextRedemptionRate(marketPrice, redemptionPrice, accumulatedLeak);
         return rateTimeline;
     }
-    function sg() external isReader view returns (uint256) {
+    function sg() external isReader view returns (int256) {
         return controllerGains.Kp;
     }
-    function ag() external isReader view returns (uint256) {
+    function ag() external isReader view returns (int256) {
         return controllerGains.Ki;
     }
     function nb() external isReader view returns (uint256) {

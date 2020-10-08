@@ -68,8 +68,6 @@ contract PIRawPerSecondValidator is SafeMath, SignedSafeMath {
     ) public {
         defaultRedemptionRate           = TWENTY_SEVEN_DECIMAL_NUMBER;
         require(Kp_ != 0, "PIRawPerSecondValidator/null-sg");
-        require(both(Kp_ >= -int(EIGHTEEN_DECIMAL_NUMBER), Kp_ <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIRawPerSecondValidator/invalid-sg");
-        require(both(Ki_ >= -int(EIGHTEEN_DECIMAL_NUMBER), Ki_ <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIRawPerSecondValidator/invalid-ag");
         require(both(feedbackOutputUpperBound_ < subtract(subtract(uint(-1), defaultRedemptionRate), 1), feedbackOutputUpperBound_ > 0), "PIRawPerSecondValidator/invalid-foub");
         require(both(feedbackOutputLowerBound_ < 0, feedbackOutputLowerBound_ >= -int(NEGATIVE_RATE_LIMIT)), "PIRawPerSecondValidator/invalid-folb");
         require(integralPeriodSize_ > 0, "PIRawPerSecondValidator/invalid-ips");
@@ -95,9 +93,6 @@ contract PIRawPerSecondValidator is SafeMath, SignedSafeMath {
     // --- Boolean Logic ---
     function both(bool x, bool y) internal pure returns (bool z) {
         assembly{ z := and(x, y)}
-    }
-    function either(bool x, bool y) internal pure returns (bool z) {
-        assembly{ z := or(x, y)}
     }
 
     // --- Administration ---
@@ -135,11 +130,9 @@ contract PIRawPerSecondValidator is SafeMath, SignedSafeMath {
         }
         else if (parameter == "sg") {
           require(val != 0, "PIRawPerSecondValidator/null-sg");
-          require(both(val >= -int(EIGHTEEN_DECIMAL_NUMBER), val <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIRawPerSecondValidator/invalid-sg");
           controllerGains.Kp = val;
         }
         else if (parameter == "ag") {
-          require(both(val >= -int(EIGHTEEN_DECIMAL_NUMBER), val <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIRawPerSecondValidator/invalid-ag");
           controllerGains.Ki = val;
         }
         else if (parameter == "pdc") {
