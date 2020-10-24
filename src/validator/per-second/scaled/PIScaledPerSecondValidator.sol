@@ -114,7 +114,6 @@ contract PIScaledPerSecondValidator is SafeMath, SignedSafeMath {
         int256[] memory importedState
     ) public {
         defaultRedemptionRate           = TWENTY_SEVEN_DECIMAL_NUMBER;
-        require(Kp_ != 0, "PIScaledPerSecondValidator/null-sg");
         require(both(feedbackOutputUpperBound_ < subtract(subtract(uint(-1), defaultRedemptionRate), 1), feedbackOutputUpperBound_ > 0), "PIScaledPerSecondValidator/invalid-foub");
         require(both(feedbackOutputLowerBound_ < 0, feedbackOutputLowerBound_ >= -int(NEGATIVE_RATE_LIMIT)), "PIScaledPerSecondValidator/invalid-folb");
         require(integralPeriodSize_ > 0, "PIScaledPerSecondValidator/invalid-ips");
@@ -177,7 +176,6 @@ contract PIScaledPerSecondValidator is SafeMath, SignedSafeMath {
           feedbackOutputLowerBound = val;
         }
         else if (parameter == "sg") {
-          require(val != 0, "PIScaledPerSecondValidator/null-sg");
           controllerGains.Kp = val;
         }
         else if (parameter == "ag") {

@@ -437,4 +437,24 @@ contract PIScaledPerSecondValidatorTest is DSTest {
         assertEq(gainAdjustedP, 18084490740725000000);
         assertEq(gainAdjustedP * int(96) * int(validator.ips()) * int(4), 24999999999978240000000000);
     }
+    function test_both_gains_zero() public {
+        validator.modifyParameters("sg", int(0));
+        validator.modifyParameters("ag", int(0));
+
+        assertEq(uint(validator.pdc()), 0);
+        validator.modifyParameters("nb", EIGHTEEN_DECIMAL_NUMBER - 1);
+
+        (uint newRedemptionRate, int pTerm, int iTerm, uint rateTimeline) =
+          validator.getNextRedemptionRate(1.05E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
+        assertEq(newRedemptionRate, 1E27);
+        assertEq(pTerm, -0.05E27);
+        assertEq(iTerm, 0);
+        assertEq(rateTimeline, defaultGlobalTimeline);
+
+        orcl.updateTokenPrice(1.05E18);
+        rateSetter.updateRate(42, address(this));
+
+        assertEq(oracleRelayer.redemptionPrice(), 1E27);
+        assertEq(oracleRelayer.redemptionRate(), 1E27);
+    }
 }
