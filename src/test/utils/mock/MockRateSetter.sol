@@ -11,14 +11,10 @@ abstract contract OracleRelayerLike {
     function modifyParameters(bytes32,uint256) virtual external;
 }
 abstract contract PIDValidator {
-    function validateSeed(uint256, uint256, uint256, uint256, uint256, uint256) virtual external returns (uint256);
+    function validateSeed(uint256, uint256, uint256) virtual external returns (uint256);
     function rt(uint256, uint256, uint256) virtual external view returns (uint256);
     function pscl() virtual external view returns (uint256);
     function tlv() virtual external view returns (uint256);
-    function lprad() virtual external view returns (uint256);
-    function uprad() virtual external view returns (uint256);
-    function adi() virtual external view returns (uint256);
-    function adat() external virtual view returns (uint256);
 }
 
 contract MockRateSetter is RateSetterMath {
@@ -57,15 +53,10 @@ contract MockRateSetter is RateSetterMath {
         // Validate the seed
         uint256 tlv       = pidValidator.tlv();
         uint256 iapcr     = rpower(pidValidator.pscl(), tlv, RAY);
-        uint256 uad       = rmultiply(pidValidator.lprad(), rpower(pidValidator.adi(), pidValidator.adat(), RAY));
-        uad               = (uad == 0) ? pidValidator.uprad() : uad;
         uint256 validated = pidValidator.validateSeed(
-            seed,
-            rpower(seed, pidValidator.rt(marketPrice, redemptionPrice, iapcr), RAY),
             marketPrice,
             redemptionPrice,
-            iapcr,
-            uad
+            iapcr
         );
         // Update the rate inside the system (if it doesn't throw)
         try oracleRelayer.modifyParameters("redemptionRate", validated) {}
@@ -74,11 +65,6 @@ contract MockRateSetter is RateSetterMath {
 
     function iapcr() public view returns (uint256) {
         return rpower(pidValidator.pscl(), pidValidator.tlv(), RAY);
-    }
-    function adjustedAllowedDeviation() public view returns (uint256) {
-        uint256 uad = rmultiply(pidValidator.lprad(), rpower(pidValidator.adi(), pidValidator.adat(), RAY));
-        uad         = (uad == 0) ? pidValidator.uprad() : uad;
-        return uad;
     }
     function getRTAdjustedSeed(uint seed, uint marketPrice, uint redemptionPrice) public returns (uint256) {
         return rpower(seed, rpower(seed, pidValidator.rt(marketPrice, redemptionPrice, iapcr()), RAY), RAY);

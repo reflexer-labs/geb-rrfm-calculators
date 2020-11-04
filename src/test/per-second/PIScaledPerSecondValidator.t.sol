@@ -2,7 +2,7 @@ pragma solidity ^0.6.7;
 
 import "ds-test/test.sol";
 
-import {PIScaledPerSecondValidator} from '../../validator/per-second/scaled/PIScaledPerSecondValidator.sol';
+import {PIScaledPerSecondValidator} from '../../validator/PIScaledPerSecondValidator.sol';
 import {MockRateSetter} from "../utils/mock/MockRateSetter.sol";
 import "../utils/mock/MockOracleRelayer.sol";
 
