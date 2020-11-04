@@ -67,7 +67,7 @@ contract DummyPIDValidatorTest is DSTest {
         assertEq(oracleRelayer.redemptionRate(), TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(oracleRelayer.redemptionPrice(), TWENTY_SEVEN_DECIMAL_NUMBER);
 
-        assertEq(validator.validateSeed(1,1,1,1,1,1), TWENTY_SEVEN_DECIMAL_NUMBER);
+        assertEq(validator.validateSeed(1,1,1), TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(validator.rt(1,1,1), 1);
         assertEq(validator.pscl(), TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(validator.tlv(), 1);
