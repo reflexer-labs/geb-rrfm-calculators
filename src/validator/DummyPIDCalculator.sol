@@ -1,10 +1,10 @@
 pragma solidity 0.6.7;
 
-contract DummyPIDValidator {
+contract DummyPIDCalculator {
   uint constant internal TWENTY_SEVEN_DECIMAL_NUMBER = 10**27;
   uint constant internal _rt = 1;
 
-  function validateSeed(uint256, uint256, uint256) virtual external returns (uint256) {
+  function computeRate(uint256, uint256, uint256) virtual external returns (uint256) {
       return TWENTY_SEVEN_DECIMAL_NUMBER;
   }
   function rt(uint256, uint256, uint256) virtual external view returns (uint256) {

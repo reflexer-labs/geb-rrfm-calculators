@@ -2,7 +2,7 @@ pragma solidity ^0.6.7;
 
 import "ds-test/test.sol";
 
-import {PIScaledPerSecondValidator} from '../../validator/PIScaledPerSecondValidator.sol';
+import {PIRawPerSecondCalculator} from '../../validator/PIRawPerSecondCalculator.sol';
 import {MockRateSetter} from "../utils/mock/MockRateSetter.sol";
 import "../utils/mock/MockOracleRelayer.sol";
 
@@ -28,13 +28,13 @@ abstract contract Hevm {
     function warp(uint256) virtual public;
 }
 
-contract PIScaledPerSecondValidatorTest is DSTest {
+contract PIRawPerSecondCalculatorTest is DSTest {
     Hevm hevm;
 
     MockOracleRelayer oracleRelayer;
     MockRateSetter rateSetter;
 
-    PIScaledPerSecondValidator validator;
+    PIRawPerSecondCalculator validator;
     Feed orcl;
 
     int256 Kp                                 = int(EIGHTEEN_DECIMAL_NUMBER);
@@ -59,7 +59,7 @@ contract PIScaledPerSecondValidatorTest is DSTest {
       oracleRelayer = new MockOracleRelayer();
       orcl = new Feed(1 ether, true);
 
-      validator = new PIScaledPerSecondValidator(
+      validator = new PIRawPerSecondCalculator(
         Kp,
         Ki,
         perSecondCumulativeLeak,
@@ -305,15 +305,15 @@ contract PIScaledPerSecondValidatorTest is DSTest {
         (uint newRedemptionRate, int pTerm, int iTerm, uint rateTimeline) =
           validator.getNextRedemptionRate(1.05E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
         assertEq(newRedemptionRate, 1);
-        assertEq(pTerm, -1049999999999999999999999999000000000000000000000000000);
-        assertEq(iTerm, -1889999999999999999999999998290000000000000000000000000000);
+        assertEq(pTerm, -1049999999999999999999999999);
+        assertEq(iTerm, -1979999999999999999999999996400);
 
         assertEq(rateTimeline, defaultGlobalTimeline);
 
         rateSetter.updateRate(42, address(this));
 
         assertEq(uint(validator.lut()), now);
-        assertEq(validator.pdc(), -1889999999999999999999999998290000000000000000000000000000);
+        assertEq(validator.pdc(), -1979999999999999999999999996400);
         assertEq(oracleRelayer.redemptionPrice(), 1);
         assertEq(oracleRelayer.redemptionRate(), 1);
     }
@@ -327,13 +327,12 @@ contract PIScaledPerSecondValidatorTest is DSTest {
         rateSetter.updateRate(42, address(this));
 
         hevm.warp(now + validator.ips() * 10); // 10 hours
-        assertEq(oracleRelayer.redemptionPrice(), 1);
 
         (uint newRedemptionRate, int pTerm, int iTerm, uint rateTimeline) =
           validator.getNextRedemptionRate(1.05E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
         assertEq(newRedemptionRate, 1);
-        assertEq(pTerm, -1049999999999999999999999999000000000000000000000000000);
-        assertEq(iTerm, -18899999999999999999999999982900000000000000000000000000000);
+        assertEq(pTerm, -1049999999999999999999999999);
+        assertEq(iTerm, -19799999999999999999999999964000);
         assertEq(rateTimeline, defaultGlobalTimeline);
 
         rateSetter.updateRate(42, address(this));
@@ -352,8 +351,8 @@ contract PIScaledPerSecondValidatorTest is DSTest {
         assertEq(iTerm, 0);
         assertEq(rateTimeline, defaultGlobalTimeline);
 
-        Kp = Kp / 4 / int(validator.ips() * 24);
-        Ki = Ki / 4 / int(validator.ips() ** 2) / 24;
+        Kp = Kp / int(4) / int(validator.ips() * 24);
+        Ki = Ki / int(4) / int(validator.ips() ** 2) / 24;
 
         assertEq(Kp, 2893518518518);
         assertEq(Ki, 803755144);
@@ -377,9 +376,9 @@ contract PIScaledPerSecondValidatorTest is DSTest {
 
         (newRedemptionRate, pTerm, iTerm, rateTimeline) =
           validator.getNextRedemptionRate(0.95E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
-        assertEq(newRedemptionRate, 1000000291498825809688551682);
-        assertEq(pTerm, 50494662801263695199553182);
-        assertEq(iTerm, 180890393042274651359195727600);
+        assertEq(newRedemptionRate, 1000000291613001814917161083);
+        assertEq(pTerm, 50520968952868729114836237);
+        assertEq(iTerm, 180937744115163712406705224800);
         assertEq(rateTimeline, defaultGlobalTimeline);
     }
     function testFail_redemption_way_higher_than_market() public {
@@ -400,8 +399,8 @@ contract PIScaledPerSecondValidatorTest is DSTest {
 
         (uint newRedemptionRate, int pTerm, int iTerm, uint rateTimeline) =
           validator.getNextRedemptionRate(2.05E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
-        assertEq(newRedemptionRate, 0.975E27);
-        assertEq(pTerm, -0.025E27);
+        assertEq(newRedemptionRate, 0.95E27);
+        assertEq(pTerm, -0.05E27);
         assertEq(iTerm, 0);
         assertEq(rateTimeline, defaultGlobalTimeline);
 
@@ -410,32 +409,32 @@ contract PIScaledPerSecondValidatorTest is DSTest {
 
         assertEq(Kp, 723379629629);
         assertEq(Ki, 0);
-        assertEq(Kp * 4 * int(validator.ips()) * 96, 999999999999129600);
+        assertEq(Kp * int(4 * validator.ips() * 96), 999999999999129600);
 
         validator.modifyParameters("sg", Kp);
         validator.modifyParameters("ag", Ki);
 
         (newRedemptionRate, pTerm, iTerm, rateTimeline) =
           validator.getNextRedemptionRate(2.05E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
-        assertEq(newRedemptionRate, 999999981915509259275000000);
-        assertEq(pTerm, -0.025E27);
+        assertEq(newRedemptionRate, 999999963831018518550000000);
+        assertEq(pTerm, -0.05E27);
         assertEq(iTerm, 0);
         assertEq(rateTimeline, defaultGlobalTimeline);
 
-        (int gainAdjustedP,) = validator.getGainAdjustedTerms(-int(0.025E27), int(0));
-        assertEq(gainAdjustedP, -18084490740725000000);
-        assertEq(gainAdjustedP * int(96) * int(validator.ips()) * int(4), -24999999999978240000000000);
+        (int gainAdjustedP,) = validator.getGainAdjustedTerms(-int(0.05E27), int(0));
+        assertEq(gainAdjustedP, -36168981481450000000);
+        assertEq(gainAdjustedP * int(96) * int(validator.ips()) * int(4), -49999999999956480000000000);
 
         (newRedemptionRate, pTerm, iTerm, rateTimeline) =
           validator.getNextRedemptionRate(1.95E18, oracleRelayer.redemptionPrice(), rateSetter.iapcr());
-        assertEq(newRedemptionRate, 1000000018084490740725000000);
-        assertEq(pTerm, 0.025E27);
+        assertEq(newRedemptionRate, 1000000036168981481450000000);
+        assertEq(pTerm, 0.05E27);
         assertEq(iTerm, 0);
         assertEq(rateTimeline, defaultGlobalTimeline);
 
-        (gainAdjustedP, ) = validator.getGainAdjustedTerms(int(0.025E27), int(0));
-        assertEq(gainAdjustedP, 18084490740725000000);
-        assertEq(gainAdjustedP * int(96) * int(validator.ips()) * int(4), 24999999999978240000000000);
+        (gainAdjustedP, ) = validator.getGainAdjustedTerms(int(0.05E27), int(0));
+        assertEq(gainAdjustedP, 36168981481450000000);
+        assertEq(gainAdjustedP * int(96) * int(validator.ips()) * int(4), 49999999999956480000000000);
     }
     function test_both_gains_zero() public {
         validator.modifyParameters("sg", int(0));

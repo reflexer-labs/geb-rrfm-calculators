@@ -1,4 +1,4 @@
-/// PIRawPerSecondValidator.sol
+/// PIScaledPerSecondCalculator.sol
 
 /**
 REFLEXER LABS TECHNOLOGIES TERMS AND CONDITIONS
@@ -49,13 +49,13 @@ pragma solidity ^0.6.7;
 import "../math/SafeMath.sol";
 import "../math/SignedSafeMath.sol";
 
-contract PIRawPerSecondValidator is SafeMath, SignedSafeMath {
+contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
     // --- Authorities ---
     mapping (address => uint) public authorities;
     function addAuthority(address account) external isAuthority { authorities[account] = 1; }
     function removeAuthority(address account) external isAuthority { authorities[account] = 0; }
     modifier isAuthority {
-        require(authorities[msg.sender] == 1, "PIRawPerSecondValidator/not-an-authority");
+        require(authorities[msg.sender] == 1, "PIScaledPerSecondCalculator/not-an-authority");
         _;
     }
 
@@ -64,7 +64,7 @@ contract PIRawPerSecondValidator is SafeMath, SignedSafeMath {
     function addReader(address account) external isAuthority { readers[account] = 1; }
     function removeReader(address account) external isAuthority { readers[account] = 0; }
     modifier isReader {
-        require(either(allReaderToggle == 1, readers[msg.sender] == 1), "PIRawPerSecondValidator/not-a-reader");
+        require(either(allReaderToggle == 1, readers[msg.sender] == 1), "PIScaledPerSecondCalculator/not-a-reader");
         _;
     }
 
@@ -98,6 +98,7 @@ contract PIRawPerSecondValidator is SafeMath, SignedSafeMath {
     uint256 internal lastUpdateTime;                       // [timestamp]
     uint256 constant internal defaultGlobalTimeline = 1;
 
+    // Address that can validate seeds
     address public seedProposer;
 
     uint256 internal constant NEGATIVE_RATE_LIMIT         = TWENTY_SEVEN_DECIMAL_NUMBER - 1;
@@ -115,11 +116,11 @@ contract PIRawPerSecondValidator is SafeMath, SignedSafeMath {
         int256[] memory importedState
     ) public {
         defaultRedemptionRate           = TWENTY_SEVEN_DECIMAL_NUMBER;
-        require(both(feedbackOutputUpperBound_ < subtract(subtract(uint(-1), defaultRedemptionRate), 1), feedbackOutputUpperBound_ > 0), "PIRawPerSecondValidator/invalid-foub");
-        require(both(feedbackOutputLowerBound_ < 0, feedbackOutputLowerBound_ >= -int(NEGATIVE_RATE_LIMIT)), "PIRawPerSecondValidator/invalid-folb");
-        require(integralPeriodSize_ > 0, "PIRawPerSecondValidator/invalid-ips");
-        require(uint(importedState[0]) <= now, "PIRawPerSecondValidator/invalid-imported-time");
-        require(noiseBarrier_ <= EIGHTEEN_DECIMAL_NUMBER, "PIRawPerSecondValidator/invalid-nb");
+        require(both(feedbackOutputUpperBound_ < subtract(subtract(uint(-1), defaultRedemptionRate), 1), feedbackOutputUpperBound_ > 0), "PIScaledPerSecondCalculator/invalid-foub");
+        require(both(feedbackOutputLowerBound_ < 0, feedbackOutputLowerBound_ >= -int(NEGATIVE_RATE_LIMIT)), "PIScaledPerSecondCalculator/invalid-folb");
+        require(integralPeriodSize_ > 0, "PIScaledPerSecondCalculator/invalid-ips");
+        require(uint(importedState[0]) <= now, "PIScaledPerSecondCalculator/invalid-imported-time");
+        require(noiseBarrier_ <= EIGHTEEN_DECIMAL_NUMBER, "PIScaledPerSecondCalculator/invalid-nb");
         authorities[msg.sender]         = 1;
         readers[msg.sender]             = 1;
         feedbackOutputUpperBound        = feedbackOutputUpperBound_;
@@ -153,33 +154,33 @@ contract PIRawPerSecondValidator is SafeMath, SignedSafeMath {
           seedProposer = addr;
           readers[seedProposer] = 1;
         }
-        else revert("PIRawPerSecondValidator/modify-unrecognized-param");
+        else revert("PIScaledPerSecondCalculator/modify-unrecognized-param");
     }
     function modifyParameters(bytes32 parameter, uint256 val) external isAuthority {
         if (parameter == "nb") {
-          require(val <= EIGHTEEN_DECIMAL_NUMBER, "PIRawPerSecondValidator/invalid-nb");
+          require(val <= EIGHTEEN_DECIMAL_NUMBER, "PIScaledPerSecondCalculator/invalid-nb");
           noiseBarrier = val;
         }
         else if (parameter == "ips") {
-          require(val > 0, "PIRawPerSecondValidator/null-ips");
+          require(val > 0, "PIScaledPerSecondCalculator/null-ips");
           integralPeriodSize = val;
         }
         else if (parameter == "foub") {
-          require(both(val < subtract(subtract(uint(-1), defaultRedemptionRate), 1), val > 0), "PIRawPerSecondValidator/invalid-foub");
+          require(both(val < subtract(subtract(uint(-1), defaultRedemptionRate), 1), val > 0), "PIScaledPerSecondCalculator/invalid-foub");
           feedbackOutputUpperBound = val;
         }
         else if (parameter == "pscl") {
-          require(val <= TWENTY_SEVEN_DECIMAL_NUMBER, "PIRawPerSecondValidator/invalid-pscl");
+          require(val <= TWENTY_SEVEN_DECIMAL_NUMBER, "PIScaledPerSecondCalculator/invalid-pscl");
           perSecondCumulativeLeak = val;
         }
         else if (parameter == "allReaderToggle") {
           allReaderToggle = val;
         }
-        else revert("PIRawPerSecondValidator/modify-unrecognized-param");
+        else revert("PIScaledPerSecondCalculator/modify-unrecognized-param");
     }
     function modifyParameters(bytes32 parameter, int256 val) external isAuthority {
         if (parameter == "folb") {
-          require(both(val < 0, val >= -int(NEGATIVE_RATE_LIMIT)), "PIRawPerSecondValidator/invalid-folb");
+          require(both(val < 0, val >= -int(NEGATIVE_RATE_LIMIT)), "PIScaledPerSecondCalculator/invalid-folb");
           feedbackOutputLowerBound = val;
         }
         else if (parameter == "sg") {
@@ -189,10 +190,10 @@ contract PIRawPerSecondValidator is SafeMath, SignedSafeMath {
           controllerGains.Ki = val;
         }
         else if (parameter == "pdc") {
-          require(controllerGains.Ki == 0, "PIRawPerSecondValidator/cannot-set-pdc");
+          require(controllerGains.Ki == 0, "PIScaledPerSecondCalculator/cannot-set-pdc");
           priceDeviationCumulative = val;
         }
-        else revert("PIRawPerSecondValidator/modify-unrecognized-param");
+        else revert("PIScaledPerSecondCalculator/modify-unrecognized-param");
     }
 
     // --- PI Specific Math ---
@@ -265,14 +266,15 @@ contract PIRawPerSecondValidator is SafeMath, SignedSafeMath {
     }
 
     // --- Rate Validation/Calculation ---
-    function validateSeed(
+    function computeRate(
       uint marketPrice,
       uint redemptionPrice,
       uint accumulatedLeak
     ) external returns (uint256) {
-        require(seedProposer == msg.sender, "PIRawPerSecondValidator/invalid-msg-sender");
-        require(subtract(now, lastUpdateTime) >= integralPeriodSize || lastUpdateTime == 0, "PIRawPerSecondValidator/wait-more");
-        int256 proportionalTerm = subtract(int(redemptionPrice), multiply(int(marketPrice), int(10**9)));
+        require(seedProposer == msg.sender, "PIScaledPerSecondCalculator/invalid-msg-sender");
+        require(subtract(now, lastUpdateTime) >= integralPeriodSize || lastUpdateTime == 0, "PIScaledPerSecondCalculator/wait-more");
+        uint256 scaledMarketPrice = multiply(marketPrice, 10**9);
+        int256 proportionalTerm = multiply(subtract(int(redemptionPrice), int(scaledMarketPrice)), int(TWENTY_SEVEN_DECIMAL_NUMBER)) / int(redemptionPrice);
         updateDeviationHistory(proportionalTerm, accumulatedLeak);
         lastUpdateTime = now;
         int256 piOutput = getGainAdjustedPIOutput(proportionalTerm, priceDeviationCumulative);
@@ -295,7 +297,8 @@ contract PIRawPerSecondValidator is SafeMath, SignedSafeMath {
     }
     function getNextRedemptionRate(uint marketPrice, uint redemptionPrice, uint accumulatedLeak)
       public isReader view returns (uint256, int256, int256, uint256) {
-        int256 proportionalTerm = subtract(int(redemptionPrice), multiply(int(marketPrice), int(10**9)));
+        uint256 scaledMarketPrice = multiply(marketPrice, 10**9);
+        int256 proportionalTerm = multiply(subtract(int(redemptionPrice), int(scaledMarketPrice)), int(TWENTY_SEVEN_DECIMAL_NUMBER)) / int(redemptionPrice);
         (int cumulativeDeviation, ) = getNextPriceDeviationCumulative(proportionalTerm, accumulatedLeak);
         int piOutput = getGainAdjustedPIOutput(proportionalTerm, cumulativeDeviation);
         if (

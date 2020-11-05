@@ -10,8 +10,8 @@ abstract contract OracleRelayerLike {
     function redemptionPrice() virtual external returns (uint256);
     function modifyParameters(bytes32,uint256) virtual external;
 }
-abstract contract PIDValidator {
-    function validateSeed(uint256, uint256, uint256) virtual external returns (uint256);
+abstract contract PIDCalculator {
+    function computeRate(uint256, uint256, uint256) virtual external returns (uint256);
     function rt(uint256, uint256, uint256) virtual external view returns (uint256);
     function pscl() virtual external view returns (uint256);
     function tlv() virtual external view returns (uint256);
@@ -24,19 +24,19 @@ contract MockRateSetter is RateSetterMath {
     // OracleRelayer where the redemption price is stored
     OracleRelayerLike         public oracleRelayer;
     // Calculator for the redemption rate
-    PIDValidator              public pidValidator;
+    PIDCalculator              public pidCalculator;
 
-    constructor(address orcl_, address oracleRelayer_, address pidValidator_) public {
+    constructor(address orcl_, address oracleRelayer_, address pidCalculator_) public {
         oracleRelayer  = OracleRelayerLike(oracleRelayer_);
         orcl           = OracleLike(orcl_);
-        pidValidator   = PIDValidator(pidValidator_);
+        pidCalculator  = PIDCalculator(pidCalculator_);
     }
 
     function modifyParameters(bytes32 parameter, address addr) external {
         if (parameter == "orcl") orcl = OracleLike(addr);
         else if (parameter == "oracleRelayer") oracleRelayer = OracleRelayerLike(addr);
-        else if (parameter == "pidValidator") {
-          pidValidator = PIDValidator(addr);
+        else if (parameter == "pidCalculator") {
+          pidCalculator = PIDCalculator(addr);
         }
         else revert("RateSetter/modify-unrecognized-param");
     }
@@ -51,9 +51,9 @@ contract MockRateSetter is RateSetterMath {
         // Get the latest redemption price
         uint redemptionPrice = oracleRelayer.redemptionPrice();
         // Validate the seed
-        uint256 tlv       = pidValidator.tlv();
-        uint256 iapcr     = rpower(pidValidator.pscl(), tlv, RAY);
-        uint256 validated = pidValidator.validateSeed(
+        uint256 tlv       = pidCalculator.tlv();
+        uint256 iapcr     = rpower(pidCalculator.pscl(), tlv, RAY);
+        uint256 validated = pidCalculator.computeRate(
             marketPrice,
             redemptionPrice,
             iapcr
@@ -64,9 +64,9 @@ contract MockRateSetter is RateSetterMath {
     }
 
     function iapcr() public view returns (uint256) {
-        return rpower(pidValidator.pscl(), pidValidator.tlv(), RAY);
+        return rpower(pidCalculator.pscl(), pidCalculator.tlv(), RAY);
     }
     function getRTAdjustedSeed(uint seed, uint marketPrice, uint redemptionPrice) public returns (uint256) {
-        return rpower(seed, rpower(seed, pidValidator.rt(marketPrice, redemptionPrice, iapcr()), RAY), RAY);
+        return rpower(seed, rpower(seed, pidCalculator.rt(marketPrice, redemptionPrice, iapcr()), RAY), RAY);
     }
 }

@@ -2,7 +2,7 @@ pragma solidity ^0.6.7;
 
 import "ds-test/test.sol";
 
-import {DummyPIDValidator} from '../../validator/DummyPIDValidator.sol';
+import {DummyPIDCalculator} from '../../validator/DummyPIDCalculator.sol';
 import {MockRateSetter} from "../utils/mock/MockRateSetter.sol";
 import "../utils/mock/MockOracleRelayer.sol";
 
@@ -28,13 +28,13 @@ abstract contract Hevm {
     function warp(uint256) virtual public;
 }
 
-contract DummyPIDValidatorTest is DSTest {
+contract DummyPIDCalculatorTest is DSTest {
     Hevm hevm;
 
     MockOracleRelayer oracleRelayer;
     MockRateSetter rateSetter;
 
-    DummyPIDValidator validator;
+    DummyPIDCalculator validator;
     Feed orcl;
 
     uint256 integralPeriodSize                = 3600;
@@ -54,7 +54,7 @@ contract DummyPIDValidatorTest is DSTest {
         oracleRelayer = new MockOracleRelayer();
         orcl = new Feed(1 ether, true);
 
-        validator = new DummyPIDValidator();
+        validator = new DummyPIDCalculator();
         rateSetter = new MockRateSetter(address(orcl), address(oracleRelayer), address(validator));
 
         self = address(this);
@@ -67,7 +67,7 @@ contract DummyPIDValidatorTest is DSTest {
         assertEq(oracleRelayer.redemptionRate(), TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(oracleRelayer.redemptionPrice(), TWENTY_SEVEN_DECIMAL_NUMBER);
 
-        assertEq(validator.validateSeed(1,1,1), TWENTY_SEVEN_DECIMAL_NUMBER);
+        assertEq(validator.computeRate(1,1,1), TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(validator.rt(1,1,1), 1);
         assertEq(validator.pscl(), TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(validator.tlv(), 1);
