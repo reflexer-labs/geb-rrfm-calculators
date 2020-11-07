@@ -287,7 +287,7 @@ contract PIRawPerSecondCalculator is SafeMath, SignedSafeMath {
         }
     }
     function updateDeviationHistory(int proportionalTerm, uint accumulatedLeak) internal {
-        (int256 virtualDeviationCumulative, int256 nextTimeAdjustedDeviation) =
+        (int256 virtualDeviationCumulative, ) =
           getNextPriceDeviationCumulative(proportionalTerm, accumulatedLeak);
         priceDeviationCumulative = virtualDeviationCumulative;
         historicalCumulativeDeviations.push(priceDeviationCumulative);
