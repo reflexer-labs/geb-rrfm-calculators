@@ -2,7 +2,7 @@ pragma solidity ^0.6.7;
 
 import "ds-test/test.sol";
 
-import {DummyPIDCalculator} from '../../validator/DummyPIDCalculator.sol';
+import {DummyPIDCalculator} from '../../calculator/DummyPIDCalculator.sol';
 import {MockRateSetter} from "../utils/mock/MockRateSetter.sol";
 import "../utils/mock/MockOracleRelayer.sol";
 
