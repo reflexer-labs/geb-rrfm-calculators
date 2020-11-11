@@ -120,7 +120,7 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
         require(both(feedbackOutputLowerBound_ < 0, feedbackOutputLowerBound_ >= -int(NEGATIVE_RATE_LIMIT)), "PIScaledPerSecondCalculator/invalid-folb");
         require(integralPeriodSize_ > 0, "PIScaledPerSecondCalculator/invalid-ips");
         require(uint(importedState[0]) <= now, "PIScaledPerSecondCalculator/invalid-imported-time");
-        require(noiseBarrier_ <= EIGHTEEN_DECIMAL_NUMBER, "PIScaledPerSecondCalculator/invalid-nb");
+        require(both(noiseBarrier_ > 0, noiseBarrier_ <= EIGHTEEN_DECIMAL_NUMBER), "PIScaledPerSecondCalculator/invalid-nb");
         authorities[msg.sender]         = 1;
         readers[msg.sender]             = 1;
         feedbackOutputUpperBound        = feedbackOutputUpperBound_;
@@ -158,7 +158,7 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
     }
     function modifyParameters(bytes32 parameter, uint256 val) external isAuthority {
         if (parameter == "nb") {
-          require(val <= EIGHTEEN_DECIMAL_NUMBER, "PIScaledPerSecondCalculator/invalid-nb");
+          require(both(val > 0, val <= EIGHTEEN_DECIMAL_NUMBER), "PIScaledPerSecondCalculator/invalid-nb");
           noiseBarrier = val;
         }
         else if (parameter == "ips") {
