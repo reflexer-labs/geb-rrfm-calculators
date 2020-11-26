@@ -1,27 +1,29 @@
 # Fuzzing the PI
 
-The contracts in this folder are the fuzz scripts for the Rate calculators.
+The contracts in this folder are the fuzz scripts for the redemption rate calculators.
 
-To run the fuzzer, set up echidna (https://github.com/crytic/echidna) in your machine
+## Setup
 
-Then run 
+To run the fuzzer, set up Echidna (https://github.com/crytic/echidna) on your machine.
+
+Then run
 ```
-echidna-test src/test/fuzz/PIRawPerSecondCalculatorFuzz.sol --contract PIRawPerSecondCalculatorFuzz  --config echidna.yaml
+echidna-test src/test/fuzz/PIRawPerSecondCalculatorFuzz.sol --contract PIRawPerSecondCalculatorFuzz --config echidna.yaml
 ```
 
-- PIRawPerSecondCalculatorFuzz: Unit fuzz of the PIRawPerSecondCalculator, turning function scrambleParams to public will make the script also fuzz the calculator params.
-- PIScaledPerSecondCalculatorFuzz: Unit fuzz of the PIScaledPerSecondCalculator, scrambleParams also present.
+- PIRawPerSecondCalculatorFuzz: Unit fuzz of the PIRawPerSecondCalculator
+- PIScaledPerSecondCalculatorFuzz: Unit fuzz of the PIScaledPerSecondCalculator
 
-Configs are in the root of this repo (echidna.yaml), settings for number and depth of runs, 
+Turning function _scrambleParams_ to public will make the script also fuzz the calculator params.
 
-The contracts in this folder are modified versions of the originals in the src folder. They have assertions added to test for invariants, visibility of functions modified. Running the Fuzz against modified versions without the assertions is still possible, general properties on the Fuzz contract can be executed against unmodified contracts.
+Configs are in the root of this repo (echidna.yaml). You can set the number of and depth of runs,
 
-Tests should be ran one at a time, they do interfere with each other and return imprecise results if ran simultaneously.
+The contracts in this folder are modified versions of the originals in the _src_ folder. They have assertions added to test for invariants, visibility of functions modified. Running the Fuzz against modified versions without the assertions is still possible, general properties on the Fuzz contract can be executed against unmodified contracts.
 
+Tests should only run one at a time because they interfere with each other.
 
-# Raw per second calculator
+## Raw per second calculator
 
-## Invariants mapped
 ### Test overflow / underflow bounds
 
 To run this import the math libraries from this folder (fuzz), they will assert for any over/underflow. Echidna will find the smallest tx order and absolute values to break them. With the normal library none of the tests fail (equidna considers reverting through a require/revert a success).
@@ -38,21 +40,21 @@ assertion in getNextPriceDeviationCumulative: failed!💥
 
     proportionalTerm: -6194939256869069804230533717575942564655944188480877224446373291349833454
     int256 proportionalTerm = subtract(int(redemptionPrice), multiply(int(marketPrice), int(10**9)));
-    redemptionPrice - (marketPrice * 10**9), ray 
-    
+    redemptionPrice - (marketPrice * 10**9), ray
+
     accumulatedLeak: 652683388792360792399972583663993930014291629521664227289133916243383
 
 assertion in getNextRedemptionRate: failed!💥  
   Call sequence:
     getNextRedemptionRate(57907308180911611479908673605988279814096989201846,47404661989147505153411213388741493402549937036869,0)
 
-    marketPrice:     57,907,308,180,911,611,479,908.673605988279814096989201846 ray 
+    marketPrice:     57,907,308,180,911,611,479,908.673605988279814096989201846 ray
     redemptionPrice: 47,404,661,989,147,505,153,411.213388741493402549937036869 ray
     accumulatedLeak: 0
 
 assertion in getGainAdjustedTerms: failed!💥  
   Call sequence:
-    getGainAdjustedTerms(-23371788062970084254565845771112215572058915791748042014, 
+    getGainAdjustedTerms(-23371788062970084254565845771112215572058915791748042014,
     57899731751471710985816757245762420458808746828303063560812)
 
     proportionalTerm -23371788062970084254565845771112215572058915791748042014
@@ -89,6 +91,7 @@ Seed: 636739298399007764
 Conclusion: All bounds are acceptable, exceeding the inputs expected in real world usage by far.
 
 ### Set Noise to 1 should stop the controller
+
 Set noise barrier to 1 (constructor) and set the fuzzComputeRate to public. This should prevent the PI from updating.
 assertion in fuzzComputeRate: failed!💥  
   Call sequence:
@@ -98,6 +101,7 @@ assertion in fuzzComputeRate: failed!💥
 Conclusion, all bounds are acceptable, exceeding the inputs expected in real world usage.
 
 ### Fuzz the KP/Ki (huge values - > overflow/underflow bounds)
+
 Turn on scramble params (set it to public), and use the math libraries on the fuzz directory.
 
 assertion in fuzzKpKi: failed!💥  
@@ -111,19 +115,17 @@ Conclusion: Kp should never exceed 1 wad, (Mainnet test version is 826942069420 
 No risks of overflowing (DoS), but setting a bound on the Kp and Ki (that are set by governance) to one Wad fully prevents an attack (or error).
 
 ### Math
+
 Testing basic math (without overflow prevention) and then comparing results in the end. Fuzz fuzzMath function to reexecute.
-Conclusion: No invariants broken. 
+Conclusion: No invariants broken.
 
+## Scaled per second calculator
 
-
-# Scaled per second calculator
-
-## Invariants mapped
 ### Test overflow / underflow bounds
 
 To run this import the math libraries from this folder (fuzz), they will assert for any over/underflow. Echidna will find the smallest tx order and absolute values to break them. With the normal library none of the tests fail (equidna considers reverting through a require/revert a success).
 
-Echidna will reduce the failure values, giving insight on what would cause overflows (In practice causing a DoS on the PI).
+Echidna will reduce the failure values, giving insight on what would cause overflows (in practice causing a DoS on the PI).
 
 Analyzing contract: /Users/fabio/Documents/reflexer/geb-rrfm-validators/src/test/fuzz/PIRawPerSecondCalculatorFuzz.sol:PIRawPerSecondCalculatorFuzz
 
@@ -135,7 +137,7 @@ assertion in getNextPriceDeviationCumulative: failed!💥
     proportionalTerm: -58149010483986169562485200136362773659683122964290783946790616067185748417
     int256 proportionalTerm = subtract(int(redemptionPrice), multiply(int(marketPrice), int(10**9)));
     redemprionPrice: 0
-    redemptionPrice - (marketPrice * 10**9), ray 
+    redemptionPrice - (marketPrice * 10**9), ray
 
     accumulatedLeak: 0
 
@@ -143,7 +145,7 @@ assertion in getNextRedemptionRate: failed!💥
   Call sequence:
     getNextRedemptionRate(57952421625837308745798226292812149793893,420616143862541621252520418029318092255179820,0)
 
-    marketPrice:          57,952,421,625,837.308745798226292812149793893 ray 
+    marketPrice:          57,952,421,625,837.308745798226292812149793893 ray
     redemptionPrice: 420,616,143,862,541,621.252520418029318092255179820 ray
     accumulatedLeak: 0
 
@@ -182,15 +184,17 @@ assertion in getGainAdjustedPIOutput: failed!💥
 
 Seed: 636739298399007764
 
-### Set Noise to 1 should stop the controller
+### Setting noise to 1 should stop the controller
+
 Set noise barrier to 1 (constructor) and set the fuzzComputeRate to public.
 assertion in fuzzComputeRate: failed!💥  
   Call sequence:
     fuzzComputeRate(0,57996469705568727824378470337833482309739182121093,0)
 
-Issue? Not stopping the PI, it does change with Noise set to 1. document as valid
+Issue? Not stopping the PI, it does change with noise set to 1. Document as valid
 
 ### Fuzz the KP/Ki (huge values - > overflow/underflow bounds)
+
 Turn on scramble params (set it to public), and use the math libraries on the fuzz directory.
 
 assertion in fuzzKpKi: failed!💥  
@@ -200,8 +204,5 @@ assertion in fuzzKpKi: failed!💥
 Kp: -1787183184978591511920776653045934116821806
 Ki: 0
 
-Conclusion: Kp should never exceed 1 wad, (Mainnet test version is 826942069420 for example), Ki should always be lower than Kp.
+Conclusion: Kp should never exceed 1 WAD, (Mainnet test version is 826942069420 for example), Ki should always be lower than Kp.
 No risks of overflowing (DoS), but setting a bound on the Kp and Ki (that are set by governance) to one Wad fully prevents an attack (or error).
-
-
-

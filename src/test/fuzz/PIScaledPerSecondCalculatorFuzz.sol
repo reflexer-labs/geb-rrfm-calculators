@@ -1,9 +1,8 @@
-pragma solidity ^0.6.7;
+pragma solidity 0.6.7;
 
 import {PIScaledPerSecondCalculator} from './PIScaledPerSecondCalculator.sol';
 
 contract PIScaledPerSecondCalculatorFuzz is PIScaledPerSecondCalculator {
-
     int256 Kp__                                 = int(EIGHTEEN_DECIMAL_NUMBER);
     int256 Ki__                                 = int(EIGHTEEN_DECIMAL_NUMBER);
     uint256 perSecondCumulativeLeak__           = 999997208243937652252849536; // 1% per hour
@@ -92,5 +91,4 @@ contract PIScaledPerSecondCalculatorFuzz is PIScaledPerSecondCalculator {
         controllerGains = ControllerGains(Kp_, Ki_);
         computeRate(marketPrice, redemptionPrice, 100);
     }
-
 }

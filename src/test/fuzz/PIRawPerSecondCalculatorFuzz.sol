@@ -90,7 +90,6 @@ contract PIRawPerSecondCalculatorFuzz is PIRawPerSecondCalculator {
         int256 Kp_,
         int256 Ki_
     ) public {
-        
         controllerGains = ControllerGains(Kp_, Ki_);
         computeRate(1 ether, 1 ether + 1000, now);
     }
@@ -119,5 +118,4 @@ contract PIRawPerSecondCalculatorFuzz is PIRawPerSecondCalculator {
         (uint rate) = computeRate(marketPrice, redemptionPrice, accumulatedLeak);
         assert (calcRate == rate);
     }
-
 }

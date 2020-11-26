@@ -44,7 +44,7 @@ ATTENTION: These Terms and Conditions (these “Terms”) are a legally binding 
     7. Risks, Disclaimers and Limitations of Liability. ALL REFLEXER TECHNOLOGIES ARE PROVIDED "AS IS" AND “AS-AVAILABLE,” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE, ARE HEREBY DISCLAIMED. IN NO EVENT SHALL REFLEXER OR ANY OTHER CONTRIBUTOR TO THE REFLEXER TECHNOLOGIES BE LIABLE FOR ANY DAMAGES, INCLUDING ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE OR INTELLECTUAL PROPERTY (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION), HOWEVER CAUSED OR CLAIMED (WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)), EVEN IF SUCH DAMAGES WERE REASONABLY FORESEEABLE  OR THE COPYRIGHT HOLDERS AND CONTRIBUTORS WERE ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **/
 
-pragma solidity ^0.6.7;
+pragma solidity 0.6.7;
 
 import "../math/SafeMath.sol";
 import "../math/SignedSafeMath.sol";
@@ -121,6 +121,8 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
         require(integralPeriodSize_ > 0, "PIScaledPerSecondCalculator/invalid-ips");
         require(uint(importedState[0]) <= now, "PIScaledPerSecondCalculator/invalid-imported-time");
         require(both(noiseBarrier_ > 0, noiseBarrier_ <= EIGHTEEN_DECIMAL_NUMBER), "PIScaledPerSecondCalculator/invalid-nb");
+        require(both(Kp_ >= -int(EIGHTEEN_DECIMAL_NUMBER), Kp_ <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIScaledPerSecondCalculator/invalid-sg");
+        require(both(Ki_ >= -int(EIGHTEEN_DECIMAL_NUMBER), Ki_ <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIScaledPerSecondCalculator/invalid-ag");
         authorities[msg.sender]         = 1;
         readers[msg.sender]             = 1;
         feedbackOutputUpperBound        = feedbackOutputUpperBound_;
@@ -184,9 +186,11 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
           feedbackOutputLowerBound = val;
         }
         else if (parameter == "sg") {
+          require(both(val >= -int(EIGHTEEN_DECIMAL_NUMBER), val <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIScaledPerSecondCalculator/invalid-sg");
           controllerGains.Kp = val;
         }
         else if (parameter == "ag") {
+          require(both(val >= -int(EIGHTEEN_DECIMAL_NUMBER), val <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIScaledPerSecondCalculator/invalid-ag");
           controllerGains.Ki = val;
         }
         else if (parameter == "pdc") {

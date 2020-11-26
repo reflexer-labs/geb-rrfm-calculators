@@ -124,6 +124,8 @@ contract PIRawPerSecondCalculator is SafeMath, SignedSafeMath {
         require(integralPeriodSize_ > 0, "PIRawPerSecondCalculator/invalid-ips");
         require(uint(importedState[0]) <= now, "PIRawPerSecondCalculator/invalid-imported-time");
         require(noiseBarrier_ <= EIGHTEEN_DECIMAL_NUMBER, "PIRawPerSecondCalculator/invalid-nb");
+        require(both(Kp_ >= -int(EIGHTEEN_DECIMAL_NUMBER), Kp_ <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIRawPerSecondCalculator/invalid-sg");
+        require(both(Ki_ >= -int(EIGHTEEN_DECIMAL_NUMBER), Ki_ <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIRawPerSecondCalculator/invalid-ag");
         authorities[msg.sender]         = 1;
         readers[msg.sender]             = 1;
         feedbackOutputUpperBound        = feedbackOutputUpperBound_;
@@ -187,9 +189,11 @@ contract PIRawPerSecondCalculator is SafeMath, SignedSafeMath {
           feedbackOutputLowerBound = val;
         }
         else if (parameter == "sg") {
+          require(both(val >= -int(EIGHTEEN_DECIMAL_NUMBER), val <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIRawPerSecondCalculator/invalid-sg");
           controllerGains.Kp = val;
         }
         else if (parameter == "ag") {
+          require(both(val >= -int(EIGHTEEN_DECIMAL_NUMBER), val <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIRawPerSecondCalculator/invalid-ag");
           controllerGains.Ki = val;
         }
         else if (parameter == "pdc") {
