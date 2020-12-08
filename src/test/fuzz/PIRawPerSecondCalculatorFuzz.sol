@@ -1,8 +1,8 @@
 pragma solidity ^0.6.7;
 
-import {PIRawPerSecondCalculator} from './PIRawPerSecondCalculator.sol';
+import {FuzzablePIRawPerSecondCalculator} from './FuzzablePIRawPerSecondCalculator.sol';
 
-contract PIRawPerSecondCalculatorFuzz is PIRawPerSecondCalculator {
+contract PIRawPerSecondCalculatorFuzz is FuzzablePIRawPerSecondCalculator {
 
     int256 Kp__                                 = int(EIGHTEEN_DECIMAL_NUMBER);
     int256 Ki__                                 = int(EIGHTEEN_DECIMAL_NUMBER);
@@ -16,7 +16,7 @@ contract PIRawPerSecondCalculatorFuzz is PIRawPerSecondCalculator {
 
     // setting the constructor values to the ones used for unit testing, check others
     constructor() public
-    PIRawPerSecondCalculator(
+    FuzzablePIRawPerSecondCalculator(
         Kp__,
         Ki__,
         perSecondCumulativeLeak__,

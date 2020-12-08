@@ -49,7 +49,7 @@ pragma solidity 0.6.7;
 import "../../math/SafeMath.sol";
 import "../../math/SignedSafeMath.sol";
 
-contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
+contract FuzzablePIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
    // --- Authorities ---
    mapping (address => uint) public authorities;
    function addAuthority(address account) external isAuthority { authorities[account] = 1; }

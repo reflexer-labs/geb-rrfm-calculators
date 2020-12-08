@@ -53,7 +53,7 @@ import "./math/SignedSafeMath.sol";
 // import "../../math/SafeMath.sol";
 // import "../../math/SignedSafeMath.sol";
 
-contract PIRawPerSecondCalculator is SafeMath, SignedSafeMath {
+contract FuzzablePIRawPerSecondCalculator is SafeMath, SignedSafeMath {
     // --- Authorities ---
     mapping (address => uint) public authorities;
     function addAuthority(address account) external isAuthority { authorities[account] = 1; }
