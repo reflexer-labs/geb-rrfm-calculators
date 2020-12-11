@@ -70,32 +70,50 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
 
     // --- Structs ---
     struct ControllerGains {
+        // This value is multiplied with the proportional term
         int Kp;                                      // [EIGHTEEN_DECIMAL_NUMBER]
+        // This value is multiplied with priceDeviationCumulative
         int Ki;                                      // [EIGHTEEN_DECIMAL_NUMBER]
     }
     struct DeviationObservation {
+        // The timestamp when this observation was stored
         uint timestamp;
+        // The proportional term stored in this observation
         int  proportional;
+        // The integral term stored in this observation
         int  integral;
     }
 
     // -- Static & Default Variables ---
+    // The Kp and Ki values used in this calculator
     ControllerGains internal controllerGains;
 
+    // Flag that can allow anyone to read variables
     uint256 public   allReaderToggle;
+    // The minimum percentage deviation from the redemption price that allows the contract to calculate a non null redemption rate
     uint256 internal noiseBarrier;                   // [EIGHTEEN_DECIMAL_NUMBER]
+    // The default redemption rate to calculate in case P + I is smaller than noiseBarrier
     uint256 internal defaultRedemptionRate;          // [TWENTY_SEVEN_DECIMAL_NUMBER]
+    // The maximum value allowed for the redemption rate
     uint256 internal feedbackOutputUpperBound;       // [TWENTY_SEVEN_DECIMAL_NUMBER]
+    // The minimum value allowed for the redemption rate
     int256  internal feedbackOutputLowerBound;       // [TWENTY_SEVEN_DECIMAL_NUMBER]
+    // The minimum delay between two computeRate calls
     uint256 internal integralPeriodSize;             // [seconds]
 
     // --- Fluctuating/Dynamic Variables ---
+    // Array of observations storing the latest timestamp as well as the proportional and integral terms
     DeviationObservation[] internal deviationObservations;
+    // Array of historical priceDeviationCumulative
     int256[]               internal historicalCumulativeDeviations;
 
+    // The integral term (sum of deviations at each calculateRate call minus the leak applied at every call)
     int256  internal priceDeviationCumulative;             // [TWENTY_SEVEN_DECIMAL_NUMBER]
+    // The per second leak applied to priceDeviationCumulative before the latest deviation is added
     uint256 internal perSecondCumulativeLeak;              // [TWENTY_SEVEN_DECIMAL_NUMBER]
+    // Timestamp of the last update
     uint256 internal lastUpdateTime;                       // [timestamp]
+    // Flag indicating that the rate computed is per second
     uint256 constant internal defaultGlobalTimeline = 1;
 
     // Address that can validate seeds
@@ -116,6 +134,7 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
         int256[] memory importedState
     ) public {
         defaultRedemptionRate           = TWENTY_SEVEN_DECIMAL_NUMBER;
+
         require(both(feedbackOutputUpperBound_ < subtract(subtract(uint(-1), defaultRedemptionRate), 1), feedbackOutputUpperBound_ > 0), "PIScaledPerSecondCalculator/invalid-foub");
         require(both(feedbackOutputLowerBound_ < 0, feedbackOutputLowerBound_ >= -int(NEGATIVE_RATE_LIMIT)), "PIScaledPerSecondCalculator/invalid-folb");
         require(integralPeriodSize_ > 0, "PIScaledPerSecondCalculator/invalid-ips");
@@ -123,8 +142,10 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
         require(both(noiseBarrier_ > 0, noiseBarrier_ <= EIGHTEEN_DECIMAL_NUMBER), "PIScaledPerSecondCalculator/invalid-nb");
         require(both(Kp_ >= -int(EIGHTEEN_DECIMAL_NUMBER), Kp_ <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIScaledPerSecondCalculator/invalid-sg");
         require(both(Ki_ >= -int(EIGHTEEN_DECIMAL_NUMBER), Ki_ <= int(EIGHTEEN_DECIMAL_NUMBER)), "PIScaledPerSecondCalculator/invalid-ag");
+
         authorities[msg.sender]         = 1;
         readers[msg.sender]             = 1;
+
         feedbackOutputUpperBound        = feedbackOutputUpperBound_;
         feedbackOutputLowerBound        = feedbackOutputLowerBound_;
         integralPeriodSize              = integralPeriodSize_;
@@ -133,11 +154,13 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
         priceDeviationCumulative        = importedState[3];
         noiseBarrier                    = noiseBarrier_;
         lastUpdateTime                  = uint(importedState[0]);
+
         if (importedState[4] > 0) {
           deviationObservations.push(
             DeviationObservation(uint(importedState[4]), importedState[1], importedState[2])
           );
         }
+
         historicalCumulativeDeviations.push(priceDeviationCumulative);
     }
 
@@ -150,6 +173,11 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
     }
 
     // --- Administration ---
+    /*
+    * @notify Modify an address parameter
+    * @param parameter The name of the address parameter to change
+    * @param addr The new address for the parameter
+    */
     function modifyParameters(bytes32 parameter, address addr) external isAuthority {
         if (parameter == "seedProposer") {
           readers[seedProposer] = 0;
@@ -158,6 +186,11 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
         }
         else revert("PIScaledPerSecondCalculator/modify-unrecognized-param");
     }
+    /*
+    * @notify Modify an uint256 parameter
+    * @param parameter The name of the parameter to change
+    * @param val The new value for the parameter
+    */
     function modifyParameters(bytes32 parameter, uint256 val) external isAuthority {
         if (parameter == "nb") {
           require(both(val > 0, val <= EIGHTEEN_DECIMAL_NUMBER), "PIScaledPerSecondCalculator/invalid-nb");
@@ -180,6 +213,11 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
         }
         else revert("PIScaledPerSecondCalculator/modify-unrecognized-param");
     }
+    /*
+    * @notify Modify an int256 parameter
+    * @param parameter The name of the parameter to change
+    * @param val The new value for the parameter
+    */
     function modifyParameters(bytes32 parameter, int256 val) external isAuthority {
         if (parameter == "folb") {
           require(both(val < 0, val >= -int(NEGATIVE_RATE_LIMIT)), "PIScaledPerSecondCalculator/invalid-folb");
@@ -209,17 +247,31 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
     }
 
     // --- PI Utils ---
+    /*
+    * Return the last proportional term stored in deviationObservations
+    */
     function getLastProportionalTerm() public isReader view returns (int256) {
         if (oll() == 0) return 0;
         return deviationObservations[oll() - 1].proportional;
     }
+    /*
+    * Return the last integral term stored in deviationObservations
+    */
     function getLastIntegralTerm() public isReader view returns (int256) {
         if (oll() == 0) return 0;
         return deviationObservations[oll() - 1].integral;
     }
+    /*
+    * @notice Return the length of deviationObservations
+    */
     function oll() public isReader view returns (uint256) {
         return deviationObservations.length;
     }
+    /*
+    * @notice Return a redemption rate bounded by feedbackOutputLowerBound and feedbackOutputUpperBound as well as the
+              timeline over which that rate will take effect
+    * @param piOutput The raw redemption rate computed from the proportional and integral terms
+    */
     function getBoundedRedemptionRate(int piOutput) public isReader view returns (uint256, uint256) {
         int  boundedPIOutput = piOutput;
         uint newRedemptionRate;
@@ -243,10 +295,20 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
 
         return (newRedemptionRate, defaultGlobalTimeline);
     }
+    /*
+    * @notice Returns whether the P + I sum exceeds the noise barrier
+    * @param piSum Represents a sum between P + I
+    * @param redemptionPrice The system coin redemption price
+    */
     function breaksNoiseBarrier(uint piSum, uint redemptionPrice) public isReader view returns (bool) {
         uint deltaNoise = subtract(multiply(uint(2), EIGHTEEN_DECIMAL_NUMBER), noiseBarrier);
         return piSum >= subtract(divide(multiply(redemptionPrice, deltaNoise), EIGHTEEN_DECIMAL_NUMBER), redemptionPrice);
     }
+    /*
+    * @notice Compute a new priceDeviationCumulative (integral term)
+    * @param proportionalTerm The proportional term (redemptionPrice - marketPrice) * TWENTY_SEVEN_DECIMAL_NUMBER / redemptionPrice
+    * @param accumulatedLeak The total leak applied to priceDeviationCumulative before it is summed with the new proportionalTerm
+    */
     function getNextPriceDeviationCumulative(int proportionalTerm, uint accumulatedLeak) public isReader view returns (int256, int256) {
         int256 lastProportionalTerm      = getLastProportionalTerm();
         uint256 timeElapsed              = (lastUpdateTime == 0) ? 0 : subtract(now, lastUpdateTime);
@@ -258,10 +320,20 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
           newTimeAdjustedDeviation
         );
     }
+    /*
+    * @notice Apply Kp to the proportional term and Ki to the integral term (by multiplication) and then sum P and I
+    * @param proportionalTerm The proportional term
+    * @param integralTerm The integral term
+    */
     function getGainAdjustedPIOutput(int proportionalTerm, int integralTerm) public isReader view returns (int256) {
         (int adjustedProportional, int adjustedIntegral) = getGainAdjustedTerms(proportionalTerm, integralTerm);
         return addition(adjustedProportional, adjustedIntegral);
     }
+    /*
+    * @notice Independently return and calculate P * Kp and I * Ki
+    * @param proportionalTerm The proportional term
+    * @param integralTerm The integral term
+    */
     function getGainAdjustedTerms(int proportionalTerm, int integralTerm) public isReader view returns (int256, int256) {
         return (
           multiply(proportionalTerm, int(controllerGains.Kp)) / int(EIGHTEEN_DECIMAL_NUMBER),
@@ -270,6 +342,13 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
     }
 
     // --- Rate Validation/Calculation ---
+    /*
+    * @notice Compute a new redemption rate
+    * @param marketPrice The system coin market price
+    * @param redemptionPrice The system coin redemption price
+    * @param accumulatedLeak The total leak that will be applied to priceDeviationCumulative (the integral) before the latest
+    *        proportional term is added
+    */
     function computeRate(
       uint marketPrice,
       uint redemptionPrice,
@@ -292,6 +371,11 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
           return TWENTY_SEVEN_DECIMAL_NUMBER;
         }
     }
+    /*
+    * @notice Push new observations in deviationObservations & historicalCumulativeDeviations while also updating priceDeviationCumulative
+    * @param proportionalTerm The proportionalTerm
+    * @param accumulatedLeak The total leak (similar to a negative interest rate) applied to priceDeviationCumulative before proportionalTerm is added to it
+    */
     function updateDeviationHistory(int proportionalTerm, uint accumulatedLeak) internal {
         (int256 virtualDeviationCumulative, ) =
           getNextPriceDeviationCumulative(proportionalTerm, accumulatedLeak);
@@ -299,6 +383,12 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
         historicalCumulativeDeviations.push(priceDeviationCumulative);
         deviationObservations.push(DeviationObservation(now, proportionalTerm, priceDeviationCumulative));
     }
+    /*
+    * @notice Compute and return the upcoming redemption rate
+    * @param marketPrice The system coin market price
+    * @param redemptionPrice The system coin redemption price
+    * @param accumulatedLeak The total leak applied to priceDeviationCumulative before it is summed with the proportionalTerm
+    */
     function getNextRedemptionRate(uint marketPrice, uint redemptionPrice, uint accumulatedLeak)
       public isReader view returns (uint256, int256, int256, uint256) {
         uint256 scaledMarketPrice = multiply(marketPrice, 10**9);
@@ -317,13 +407,23 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
     }
 
     // --- Parameter Getters ---
+    /*
+    * @notice Get the timeline over which the computed redemption rate takes effect e.g rateTimeline = 3600 so the rate is
+    *         computed over 1 hour
+    */
     function rt(uint marketPrice, uint redemptionPrice, uint accumulatedLeak) external isReader view returns (uint256) {
         (, , , uint rateTimeline) = getNextRedemptionRate(marketPrice, redemptionPrice, accumulatedLeak);
         return rateTimeline;
     }
+    /*
+    * @notice Return Kp
+    */
     function sg() external isReader view returns (int256) {
         return controllerGains.Kp;
     }
+    /*
+    * @notice Return Ki
+    */
     function ag() external isReader view returns (int256) {
         return controllerGains.Ki;
     }
@@ -354,24 +454,15 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
     function pscl() external isReader view returns (uint256) {
         return perSecondCumulativeLeak;
     }
-    function lprad() external isReader view returns (uint256) {
-        return 1;
-    }
-    function uprad() external isReader view returns (uint256) {
-        return uint(-1);
-    }
-    function adi() external isReader view returns (uint256) {
-        return TWENTY_SEVEN_DECIMAL_NUMBER;
-    }
-    function mrt() external isReader view returns (uint256) {
-        return 1;
-    }
     function lut() external isReader view returns (uint256) {
         return lastUpdateTime;
     }
     function dgt() external isReader view returns (uint256) {
         return defaultGlobalTimeline;
     }
+    /*
+    * @notice Returns the time elapsed since the last calculateRate call minus integralPeriodSize
+    */
     function adat() external isReader view returns (uint256) {
         uint elapsed = subtract(now, lastUpdateTime);
         if (elapsed < integralPeriodSize) {
@@ -379,6 +470,9 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
         }
         return subtract(elapsed, integralPeriodSize);
     }
+    /*
+    * @notice Returns the time elapsed since the last calculateRate call
+    */
     function tlv() external isReader view returns (uint256) {
         uint elapsed = (lastUpdateTime == 0) ? 0 : subtract(now, lastUpdateTime);
         return elapsed;

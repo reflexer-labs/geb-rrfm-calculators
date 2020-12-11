@@ -34,7 +34,7 @@ contract DummyPIDCalculatorTest is DSTest {
     MockOracleRelayer oracleRelayer;
     MockRateSetter rateSetter;
 
-    DummyPIDCalculator validator;
+    DummyPIDCalculator calculator;
     Feed orcl;
 
     uint256 integralPeriodSize                = 3600;
@@ -54,26 +54,22 @@ contract DummyPIDCalculatorTest is DSTest {
         oracleRelayer = new MockOracleRelayer();
         orcl = new Feed(1 ether, true);
 
-        validator = new DummyPIDCalculator();
-        rateSetter = new MockRateSetter(address(orcl), address(oracleRelayer), address(validator));
+        calculator = new DummyPIDCalculator();
+        rateSetter = new MockRateSetter(address(orcl), address(oracleRelayer), address(calculator));
 
         self = address(this);
     }
 
     function test_correct_setup() public {
         hevm.warp(now + integralGranularity);
-        rateSetter.updateRate(42, address(this));
+        rateSetter.updateRate(address(this));
 
         assertEq(oracleRelayer.redemptionRate(), TWENTY_SEVEN_DECIMAL_NUMBER);
         assertEq(oracleRelayer.redemptionPrice(), TWENTY_SEVEN_DECIMAL_NUMBER);
 
-        assertEq(validator.computeRate(1,1,1), TWENTY_SEVEN_DECIMAL_NUMBER);
-        assertEq(validator.rt(1,1,1), 1);
-        assertEq(validator.pscl(), TWENTY_SEVEN_DECIMAL_NUMBER);
-        assertEq(validator.tlv(), 1);
-        assertEq(validator.lprad(), 1);
-        assertEq(validator.uprad(), uint(-1));
-        assertEq(validator.adi(), TWENTY_SEVEN_DECIMAL_NUMBER);
-        assertEq(validator.adat(), 0);
+        assertEq(calculator.computeRate(1,1,1), TWENTY_SEVEN_DECIMAL_NUMBER);
+        assertEq(calculator.rt(1,1,1), 1);
+        assertEq(calculator.pscl(), TWENTY_SEVEN_DECIMAL_NUMBER);
+        assertEq(calculator.tlv(), 1);
     }
 }

@@ -41,7 +41,7 @@ contract MockRateSetter is RateSetterMath {
         else revert("RateSetter/modify-unrecognized-param");
     }
 
-    function updateRate(uint seed, address feeReceiver) public {
+    function updateRate(address feeReceiver) public {
         // Get price feed updates
         (uint256 marketPrice, bool hasValidValue) = orcl.getResultWithValidity();
         // If the oracle has a value
@@ -50,7 +50,7 @@ contract MockRateSetter is RateSetterMath {
         require(marketPrice > 0, "MockRateSetter/null-market-price");
         // Get the latest redemption price
         uint redemptionPrice = oracleRelayer.redemptionPrice();
-        // Validate the seed
+        // Calculate the new redemption rate
         uint256 tlv       = pidCalculator.tlv();
         uint256 iapcr     = rpower(pidCalculator.pscl(), tlv, RAY);
         uint256 validated = pidCalculator.computeRate(
@@ -65,8 +65,5 @@ contract MockRateSetter is RateSetterMath {
 
     function iapcr() public view returns (uint256) {
         return rpower(pidCalculator.pscl(), pidCalculator.tlv(), RAY);
-    }
-    function getRTAdjustedSeed(uint seed, uint marketPrice, uint redemptionPrice) public returns (uint256) {
-        return rpower(seed, rpower(seed, pidCalculator.rt(marketPrice, redemptionPrice, iapcr()), RAY), RAY);
     }
 }

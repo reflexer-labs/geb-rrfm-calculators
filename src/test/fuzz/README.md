@@ -26,7 +26,7 @@ Tests should only run one at a time because they interfere with each other.
 
 ### Test overflow / underflow bounds
 
-To run this import the math libraries from this folder (fuzz), they will assert for any over/underflow. Echidna will find the smallest tx order and absolute values to break them. With the normal library none of the tests fail (equidna considers reverting through a require/revert a success).
+To run this import the math libraries from this folder (fuzz), they will assert for any over/underflow. Echidna will find the smallest tx order and absolute values to break them. With the normal library none of the tests fail (Echidna considers reverting through a require/revert a success).
 
 Echidna will reduce the failure values, giving insight on what would cause overflows (In practice causing a DoS on the PI).
 

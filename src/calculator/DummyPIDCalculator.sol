@@ -16,15 +16,6 @@ contract DummyPIDCalculator {
   function tlv() virtual external view returns (uint256) {
       return 1;
   }
-  function lprad() virtual external view returns (uint256) {
-      return 1;
-  }
-  function uprad() virtual external view returns (uint256) {
-      return uint(-1);
-  }
-  function adi() virtual external view returns (uint256) {
-      return TWENTY_SEVEN_DECIMAL_NUMBER;
-  }
   function adat() virtual external view returns (uint256) {
       return 0;
   }
