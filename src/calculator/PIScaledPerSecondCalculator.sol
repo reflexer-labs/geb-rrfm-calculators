@@ -282,13 +282,18 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
           boundedPIOutput = int(feedbackOutputUpperBound);
         }
 
+        // newRedemptionRate cannot be lower than 10^0 (1) because of the way rpower is designed
         bool negativeOutputExceedsHundred = (boundedPIOutput < 0 && -boundedPIOutput >= int(defaultRedemptionRate));
+
+        // If it is smaller than 1, set it to the nagative rate limit
         if (negativeOutputExceedsHundred) {
           newRedemptionRate = NEGATIVE_RATE_LIMIT;
         } else {
+          // If boundedPIOutput is lower than -int(NEGATIVE_RATE_LIMIT) set newRedemptionRate to 1
           if (boundedPIOutput < 0 && boundedPIOutput <= -int(NEGATIVE_RATE_LIMIT)) {
             newRedemptionRate = uint(addition(int(defaultRedemptionRate), -int(NEGATIVE_RATE_LIMIT)));
           } else {
+            // Otherwise add defaultRedemptionRate and boundedPIOutput together
             newRedemptionRate = uint(addition(int(defaultRedemptionRate), boundedPIOutput));
           }
         }
@@ -354,17 +359,26 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
       uint redemptionPrice,
       uint accumulatedLeak
     ) external returns (uint256) {
+        // Only the seed proposer can call this
         require(seedProposer == msg.sender, "PIScaledPerSecondCalculator/invalid-msg-sender");
+        // Ensure that at least integralPeriodSize seconds passed since the last update or that this is the first update
         require(subtract(now, lastUpdateTime) >= integralPeriodSize || lastUpdateTime == 0, "PIScaledPerSecondCalculator/wait-more");
+        // Scale the market price by 10^9 so it also has 27 decimals like the redemption price
         uint256 scaledMarketPrice = multiply(marketPrice, 10**9);
+        // Calculate the proportional term as (redemptionPrice - marketPrice) * TWENTY_SEVEN_DECIMAL_NUMBER / redemptionPrice
         int256 proportionalTerm = multiply(subtract(int(redemptionPrice), int(scaledMarketPrice)), int(TWENTY_SEVEN_DECIMAL_NUMBER)) / int(redemptionPrice);
+        // Update the integral term by passing the proportional (current deviation) and the total leak that will be applied to the integral
         updateDeviationHistory(proportionalTerm, accumulatedLeak);
+        // Set the last update time to now
         lastUpdateTime = now;
+        // Multiply P by Kp and I by Ki and then sum P & I in order to return the result
         int256 piOutput = getGainAdjustedPIOutput(proportionalTerm, priceDeviationCumulative);
+        // If the P * Kp + I * Ki output breaks the noise barrier, you can recompute a non null rate. Also make sure the sum is not null
         if (
           breaksNoiseBarrier(absolute(piOutput), redemptionPrice) &&
           piOutput != 0
         ) {
+          // Get the new redemption rate by taking into account the feedbackOutputUpperBound and feedbackOutputLowerBound
           (uint newRedemptionRate, ) = getBoundedRedemptionRate(piOutput);
           return newRedemptionRate;
         } else {
