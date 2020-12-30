@@ -257,7 +257,7 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
     /*
     * Return the last integral term stored in deviationObservations
     */
-    function getLastIntegralTerm() public isReader view returns (int256) {
+    function getLastIntegralTerm() external isReader view returns (int256) {
         if (oll() == 0) return 0;
         return deviationObservations[oll() - 1].integral;
     }
