@@ -312,7 +312,7 @@ contract PIScaledPerSecondCalculator is SafeMath, SignedSafeMath {
     /*
     * @notice Compute a new priceDeviationCumulative (integral term)
     * @param proportionalTerm The proportional term (redemptionPrice - marketPrice) * TWENTY_SEVEN_DECIMAL_NUMBER / redemptionPrice
-    * @param accumulatedLeak The total leak applied to priceDeviationCumulative before it is summed with the new proportionalTerm
+    * @param accumulatedLeak The total leak applied to priceDeviationCumulative before it is summed with the new time adjusted deviation
     */
     function getNextPriceDeviationCumulative(int proportionalTerm, uint accumulatedLeak) public isReader view returns (int256, int256) {
         int256 lastProportionalTerm      = getLastProportionalTerm();
