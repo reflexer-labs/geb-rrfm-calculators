@@ -3,7 +3,8 @@ pragma solidity ^0.6.7;
 import "ds-test/test.sol";
 
 import {PIScaledPerSecondCalculator} from '../../calculator/PIScaledPerSecondCalculator.sol';
-import {MockRateSetter} from "../utils/mock/MockRateSetter.sol";
+import {MockPIRateSetter} from "../utils/mock/MockPIRateSetter.sol";
+import {MockSetterRelayer} from "../utils/mock/MockSetterRelayer.sol";
 import "../utils/mock/MockOracleRelayer.sol";
 
 contract Feed {
@@ -35,7 +36,8 @@ contract PIScaledPerSecondCalculatorTest is DSTest {
     Hevm hevm;
 
     MockOracleRelayer oracleRelayer;
-    MockRateSetter rateSetter;
+    MockPIRateSetter rateSetter;
+    MockSetterRelayer setterRelayer;
 
     PIScaledPerSecondCalculator calculator;
     Feed orcl;
@@ -62,6 +64,7 @@ contract PIScaledPerSecondCalculatorTest is DSTest {
       oracleRelayer = new MockOracleRelayer();
       orcl = new Feed(1 ether, true);
 
+      setterRelayer = new MockSetterRelayer(address(oracleRelayer));
       calculator = new PIScaledPerSecondCalculator(
         Kp,
         Ki,
@@ -73,7 +76,8 @@ contract PIScaledPerSecondCalculatorTest is DSTest {
         importedState
       );
 
-      rateSetter = new MockRateSetter(address(orcl), address(oracleRelayer), address(calculator));
+      rateSetter = new MockPIRateSetter(address(orcl), address(oracleRelayer), address(calculator), address(setterRelayer));
+      setterRelayer.modifyParameters("setter", address(rateSetter));
       calculator.modifyParameters("seedProposer", address(rateSetter));
 
       self = address(this);

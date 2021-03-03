@@ -3,7 +3,8 @@ pragma solidity ^0.6.7;
 import "ds-test/test.sol";
 
 import {DummyPIDCalculator} from '../../calculator/DummyPIDCalculator.sol';
-import {MockRateSetter} from "../utils/mock/MockRateSetter.sol";
+import {MockPIRateSetter} from "../utils/mock/MockPIRateSetter.sol";
+import {MockSetterRelayer} from "../utils/mock/MockSetterRelayer.sol";
 import "../utils/mock/MockOracleRelayer.sol";
 
 contract Feed {
@@ -32,7 +33,8 @@ contract DummyPIDCalculatorTest is DSTest {
     Hevm hevm;
 
     MockOracleRelayer oracleRelayer;
-    MockRateSetter rateSetter;
+    MockPIRateSetter rateSetter;
+    MockSetterRelayer setterRelayer;
 
     DummyPIDCalculator calculator;
     Feed orcl;
@@ -54,8 +56,11 @@ contract DummyPIDCalculatorTest is DSTest {
         oracleRelayer = new MockOracleRelayer();
         orcl = new Feed(1 ether, true);
 
+        setterRelayer = new MockSetterRelayer(address(oracleRelayer));
         calculator = new DummyPIDCalculator();
-        rateSetter = new MockRateSetter(address(orcl), address(oracleRelayer), address(calculator));
+        rateSetter = new MockPIRateSetter(address(orcl), address(oracleRelayer), address(calculator), address(setterRelayer));
+
+        setterRelayer.modifyParameters("setter", address(rateSetter));
 
         self = address(this);
     }
