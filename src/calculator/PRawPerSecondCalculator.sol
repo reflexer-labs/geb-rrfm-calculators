@@ -52,7 +52,7 @@ contract PRawPerSecondCalculator is SafeMath, SignedSafeMath {
 
     // -- Static & Default Variables ---
     // The Kp used in this calculator
-    int256  public Kp;                               // [EIGHTEEN_DECIMAL_NUMBER]
+    int256  internal Kp;                             // [EIGHTEEN_DECIMAL_NUMBER]
 
     // Flag that can allow anyone to read variables
     uint256 public   allReaderToggle;
