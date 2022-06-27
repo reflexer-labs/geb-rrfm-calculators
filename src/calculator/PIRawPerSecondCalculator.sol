@@ -7,7 +7,7 @@ Definitions
 
 Primary License: This license agreement
 Secondary License: GNU General Public License v2.0 or later
-Effective Date of Secondary License: May 5, 2023
+Effective Date of Secondary License: August 1st, 2022
 
 Licensed Software:
 
